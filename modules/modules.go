@@ -11,7 +11,7 @@ import (
 	"centi/modules/huggingface"
 	//"centi/modules/bluetooth"
 	//"centi/modules/p2p"
-	"centi/modules/tcpudp"
+	"centi/modules/tls"
 	ssh "centi/modules/ssh"
 )
 
@@ -72,6 +72,6 @@ func InitAllModules() {
 	RegisterModule( Module{"email", email.SupportedExt, email.NewEmailConn } )
 	//RegisterModule( Module{"bluetooth", bluetooth.SupportedExt, bluetooth.NewBluetoothConn } )
 	//RegisterModule( Module{"p2p", p2p.SupportedExt, p2p.NewP2PConn } )
-	RegisterModule( Module{"tcpudp", tcpudp.SupportedExt, tcpudp.NewNetConn } )
+	RegisterModule( Module{"tls", tls.SupportedExt, tls.NewNetConn } )
 	RegisterModule( Module{"ssh", ssh.SupportedExt, ssh.NewSshConn} )
 }
