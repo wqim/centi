@@ -3,7 +3,7 @@ This part of repository contains modules for platform clients which can be used 
 
 Currently working modules:
 - Gitea
-- TCPUDP (TLS)
+- TLS
 - HuggingFace (works only for one person)
 - GitHub (also works for one person, because bans the way the module works, probably considers our accounts as bot)
 
