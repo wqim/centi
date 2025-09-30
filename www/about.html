@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About | Centi</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <!-- Navigation menu bar -->
+    <nav>
+        <a href="/">Home</a>
+        <a href="about.html">About</a>
+        <!-- Add more links as needed -->
+    </nav>
+    <header>
+        <h1>About</h1>
+    </header>
+    <main>
+	    <h3>What is Centi?</h3>
+	    <p>Centi is a framework for building anonymous networks upon controlled communication channels.
+	       It is made in order to give people in censured countries access to anonymous and secure communications
+	       even if only dictatorish services will work.</p>
+	    <p>Centi is not magic, although it is designed to make all of the network participants as anonymous as possible
+	       in given situation.</p>
+	    <p>The core of Centi network is its modules. They allow people to send and receive messages in relatively
+	       secure manner.</p>
+
+	    <h3>How does it work?</h3>
+	    <p>Centi uses the same principles as Hidden Lake anonymous network. All the participants have some kind
+	       of messages queue, which stores both fake and real packets. Every packet is sent to all the network participants,
+	       so there is no way for outside observer to know who is the receiver. It is also impossible for the observer to
+	       know if the packet is fake or real because they have the same size and structure.</p>
+	    <p>Centi does not use some ideas as Hidden Lake, for example, fixed time of packet sending, because of
+	       bot-banning systems and EDRs.</p>
+	    <p>Centi also has it's variant of data polymorphism. At least it should, I did not finished the network yet.</p>
+
+	    <h3>Physical security and network latency of Centi</h3>
+	    <p>Centy tries to be as silent as possible, utilizing steganography algorithms in order to hide packet's presense.
+	       The program also keeps all the databases and configuration files encrypted. Optionally, you can turn log
+	       encryption on, if you want.</p>
+
+	    <h3>Current state of the project</h3>
+	    <p>Centi project is under active development. If you want to contribute, feel free to create a fork
+	       and submit merge requests.</p>
+    </main>
+    <footer>
+        <p>&copy; 2025 Centi Project</p>
+    </footer>
+</body>
+</html>

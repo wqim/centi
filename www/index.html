@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Centi | Testing page</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <!-- Navigation menu bar -->
+    <nav>
+        <a href="">Home</a>
+        <a href="about.html">About</a>
+        <!-- Add more links as needed -->
+    </nav>
+    <header>
+        <h1>Centi testing page</h1>
+    </header>
+    <main>
+        <p>This is a sample page for testing Centi network connectivity.</p>
+	<h3>All the errors will be here:</h3>
+	<div>
+		<div id="errors"></div>
+		<br>
+		<!-- <div id="debug"></div>
+		<br> -->
+	</div>
+	<!-- <button id="list-keys">Get list of keys</button> -->
+	<div id="keys-holder">
+		<h3>Known public keys:</h3>
+		<div id="known-keys"></div>
+		<br>
+	</div>
+	<br>
+	<div>
+		<input id="key-alias" type="text" placeholder="Enter key alias here..."></input>
+		<button id="connect-btn">Connect</button>
+		<button id="request-pks">Request public keys</button>
+	</div>
+	<br>
+	<div>
+		<h3>Connected peers:</h3>
+		<div id="peers-holder"></div>
+	</div>
+	<br>
+	<div>
+		<input id="peer" type="text" placeholder="Enter peer"></input>
+		<textarea id="data" type="text" placeholder="Enter data"></textarea>
+		<br>
+		<button id="send-request">Send</button>
+	</div>
+	<br>
+	<div>
+		<h3>Received messages:</h3>
+		<p id="received-messages"></p>
+	</div>
+    </main>
+    <footer>
+        <p>&copy; 2025 Centi Project</p>
+    </footer>
+    <script src="/script.js"></script>
+</body>
+</html>
