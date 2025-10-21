@@ -1,0 +1,225 @@
+\documentclass{article}
+\title{Centi network | Usage guide}
+\author{Centi Project}
+
+\usepackage{listings}
+\usepackage{color}
+\usepackage{indentfirst}
+\renewcommand\lstlistingname{Quelltext}
+
+\lstset{ % General setup for the package
+    language=Bash,
+    numbers=left,
+    frame=tb,
+    tabsize=4,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    keepspaces,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue}
+}
+
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+\section{Overview}
+	\subsection{What is Centi?}
+	Centi is a some kind of framework for building anonymous
+	networks upon controlled communication channels.
+	It is made in order to give people in censured countries access
+	to anonymous and secure communications even if only dictatorish services will work.
+
+	Centi is not magic, although it is designed to make all of
+	the network participants as anonymous as possible in described situation.
+
+	\subsection{How does it work?}
+	The core of Centi network is its modules. A module is a part of
+	program which allows users to communicate in some way, for example,
+	via popular platforms like GitHub, bluetooth devices, WebRTC, etc.
+	So in case if one channel of communications will be blocked, an another
+	one will be adapted quickly and users will be able to communicate with each other again.
+	
+	Centi also supposed to use different steganography methods to make
+	high latency communications. If you are interested in methods of steganography,
+	please, review our steganography module and suggest any improvements if you know
+	how to make it better.
+
+	Currently steganography methods for PNG, JPEG, GIF, WAV, MP3, FLAC, ZIP and some
+	other files are supported, we are looking to make this list bigger in the future.
+
+\section{Installation}
+	Clone repository and build Centi with following commands:
+	\begin{lstlisting}
+git clone https://github.com/random-username-dummy/centi
+cd centi
+make release
+	\end{lstlisting}
+	If you want, you can move binary to any location in your PATH.
+
+\section{Quick start}
+
+	For the first time you run Centi, it asks you for a password.
+	This is a password for all of your configuration files, logs, etc.
+	You shouldn't use you local root or user password, really, just
+	create a new one which is easy for you to remember (but not easy for attacker to guess).
+	Every time you run Centi it will ask you for this password so don't lose it.
+	
+	If you have accidentially lost password, you can just remove ~/.centi directory
+	and start the network again. But all of your configuration will be lost and you'll
+	spend some time to reabilitate it.
+
+	So, let's continue.
+	You can run the network using the following command:
+	\begin{lstlisting}
+./centi run
+	\end{lstlisting}
+	
+	For the first time network won't connect to any nodes because it is not configured yet.
+	In case something went wrong and you didn't manage to connect to network after setting
+	up connection parameters, read the logs with following command:
+	\begin{lstlisting}
+./centi readlog
+	\end{lstlisting}
+	
+	This will show all the errors the program has encounted.
+
+\section{Configuration}
+	On first execution the program also will generate default configuration file
+	which MUST be edited in order for you to connect the network.
+	Edit configuration with following command:
+	\begin{lstlisting}
+./centi editconf
+	\end{lstlisting}
+	
+	Centi will use Vim as a default text editor. You can change this behaviour by
+	adding CENTI\_EDITOR environment variable, for example:
+	\begin{lstlisting}
+export CENTI\_EDITOR=/usr/bin/nano
+	\end{lstlisting}
+	
+	So, what do we see here?
+	\subsection{Network configuration}
+	First of all, you can see what configuration is split onto some smaller confguration.
+	The first configuration is network configuration. Here you can see options,
+	related to network performance: min\_delay, max\_delay, keys\_collection\_delay, queue\_size and packet\_size.
+	If you aren't sure, leave them as is for now.
+
+	Next you can see privacy-related settings: accept\_unknown, send\_known\_peers and
+	ephemerial\_mode. You can read more about these settings in Advanced options section.
+
+	Most vital parameters in network configuration are network\_key and network\_subkeys.
+
+	network\_key is a key of your subnetwork. Only you and your trusted nodes (friends)
+	use it for key exchange. And yes, nothing works without it.
+
+	network\_subkeys is a dictionary which contains peers data in format
+	"username": "pre-shared-secret". Username is a username on platform,
+	ip address, email address or whatever your modules require.
+
+	Let's look at the example.
+	We have Alice and Bob. They have agreed what their PSK is "i-love-freedom" (please, use
+	more reliable one).
+
+	Alice adds line '"bob": "i-love-freedom",' in her network subkeys configuration and Bob adds line
+	'"alice": "i-love-freedom",'.
+	
+	After that they are able to exchange public keys securely.
+
+	The last parameter, key\_distribution\_parameters, is used by Centi modules. You can specify
+	nothing here. In this case module must use it's default public key distribution algorithms.
+
+	\subsection{Local server configuration}
+	This section is related to configuration of your local server. This one is used
+	for handling API requests to network. You can pick any port and address you want
+	the server to run on.
+	
+	WARNING: API server does not support authentication yet. Do not allow anyone
+	(except yourself) connect to it.
+
+	`pages` parameter contains all the locations of files to use for general HTTP service.
+	You can put your applications here, if you want.
+
+	\subsection{Steganography configuration}
+	This is the smallest configuration ever. All you need is to specify a folder with decoy files.
+	Again, Centi's steganography methods support many files formats, just find a lot of appropriate
+	files and put them here.
+
+	\subsection{Logger configuration}
+	This is an extra configuration which is not neccessary at all. Leave default if you don't want
+	to spend time on this. If you want logs to be encrypted or not encrypted, change `is\_encrypted`
+	parameter value and you are good to go.
+
+	\subsection{Platforms data}
+	This is a one of the most important configurations. It holds all your modules configuration data (
+	api tokens, usernames, repositories names, etc.).
+
+	A single entity of platform data contains the following fields:
+	platform - the name of platform.
+	args - a dictionary of argument to module.
+	channels - a list of channels for I/O. Every channel contains it's name and arguments.
+	
+	You should find information about correct configuration for concrete module
+	in your module's docs.
+
+	\subsection{Database configuration}
+	This is even not a section, it's just 3 parameters: database file location, password for
+	database (cleartext, because configuration file it's stored in is encrypted anyway)
+	and rows limit.
+
+	\subsection{Keys configuration}
+	This is an another one vital section. It contains all the pre-shared secrets and your keys.
+	Do NOT share your secret(private) key with anyone but give public key to whoever you want to.
+	Also do NOT edit your keys by hand.
+
+	\subsection{Conclustion}
+	This is all the options you can configure for now. Yeah, there are a lot of them. But these options allow
+	you to create your own subnetworks and do whatever you need without changing any single line of code.
+
+
+\section{Advanced options}
+	\subsection{Security settings}
+		\paragraph{Ephemerial mode}
+		Centi network has such feature as ephemerial mode.
+		In this mode every node you are connecting to(even trusted one) does not know any of your public keys.
+		This mode is enabled by default but if you want to be authenticated on nodes you trust, no one stops you.
+		But be careful.
+
+		\paragraph{Accept unknown connections}
+		You can not accept connections from people you don't know. But in this case all your friends
+		will have to disable ephemerial mode. Use if you and your friends have bad internet speed and
+		want to create your own subnetwork.
+
+		\paragraph{Passwords}
+		In order to prevent MitM attacks, Centi uses pre-shared secrets or passwords.
+		These passwords are used only for HMAC calculation and authentication.
+		PSKs do not directly participate in key exchange or key generation.
+		Just agree with your trusted nodes when you will change PSKs and their parameters.
+		Also agree on what to do in case if you'll lose your PSKs.
+		And please, do this OUTSIDE controlled social media and platforms.
+		Use decentralized messengers or, what even better, offline communication channels for this.
+
+	\subsection{Performance settings}
+		\paragraph{Buffer size}
+		If you want to send more or less data if you do now, just change the buffer size.
+		The only requirement for buffer size is what it must be bigger than 2048 bytes (because of public keys sizes).
+		Your trusted nodes and other nodes you are connecting to must use the same
+		size of buffer so you can use buffer size as some kind of `private network parameter`.
+		However, we consider what buffer size should not change network behaviour and
+		this should be fixed in future versions.
+
+		\paragraph{Delays between requests}
+		Centi network uses randomized delays between sending packages.
+		You can change them in configuration but be careful because too small delays tend to hit rate limits.
+
+		\paragraph{Queue size}
+		The size of messages queue, this is used only for your messages,
+		not for messages which you are resending to other people.
+		Any reasonable size is fine.
+\section{FAQ}
+	There is no actual frequently asked questions so this section is empty for now.
+	If you have any questions, contact us on <email-address>.
+\end{document}
