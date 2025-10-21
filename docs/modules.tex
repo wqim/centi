@@ -1,0 +1,113 @@
+\documentclass{article}
+\title{Centi network | Modules}
+\author{Centi Project}
+
+\usepackage{listings}
+\usepackage{color}
+\usepackage{indentfirst}
+\renewcommand\lstlistingname{Quelltext}
+
+\lstset{ % General setup for the package
+    language=Go,
+    numbers=left,
+    frame=tb,
+    tabsize=4,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    keepspaces,
+    keywordstyle=\color{blue}
+}
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+	This is a really short guide for ones who want to create their own Centi modules.
+	Almost no words, only code but very detailed. I tried to explain module anatomy as
+	good as I can. If you feel it's not enought to understand how to create a module,
+	contact with me or other developers of Centi.
+
+\section{Writing a custom Centi module}
+	\subsection{Connection interface}
+	For handling multiple possible channels, Centi uses the following interface:
+	\begin{lstlisting}
+/* some imports from above
+import (
+	"centi/config"
+)
+*/
+type Connection interface{
+
+	Name() string
+	InitChannels() error
+	DeleteChannels() error
+	DistributePk( p *config.DistributionParameters, pk []byte ) error
+	CollectPks( p *config.DistributionParameters ) ([]KnownPk, error)
+
+	Send( msg *Message ) error
+	RecvAll() ([]*Message, error)
+
+	PrepareToDelete( data []byte ) (*Message, error )
+	Delete( msg *Message ) error
+
+	MessageFromBytes( data []byte ) (*Message, error)
+}
+	\end{lstlisting}
+	
+	Where KnownPk structure looks like this:
+	\begin{lstlisting}
+type KnownPk struct {
+	Platform	string	// name of platform the key was taken from
+	Alias		string	// alias of key (usually, a username of key owner)
+	Content		[]byte	// the public key content itself.
+}
+	\end{lstlisting}
+
+	And message structure looks like this:
+	\begin{lstlisting}
+type Message struct {
+
+	Platform	string		// name of platform message was collected from
+	Data		[]byte		// content of the message
+
+	// alias of the sender (peer alias)
+	// or empty string for unknown, or magic string
+	// centi/protocol.UnknownSender.
+	Sender		string
+	SentByUs	bool		// check if the message was sent by us
+	// may be used by modules, centi does not touch this.
+	Args		map[string]string
+}
+	\end{lstlisting}
+
+	So if you want to create your own module, you should comply with that interface and I/O formats.
+	After creating a module, register it in file modules/modules.go in function InitAllModules:
+	\begin{lstlisting}
+/* module structure from above: */
+type Module struct {
+	// name of module
+	Name		string
+	
+	// list of supported files extensions (for steganography)
+	SupportedExt	[]string	
+
+	// constructor-function, accepts arguments and a list of channels.
+	Contructor	func( map[string]string, []config.Channel ) (
+		protocol.Connection, error
+	)
+}
+
+func InitAllModules() {
+	RegisterModule( Module{"github", github.SupportedExt, github.NewGitHubConn } )
+	RegisterModule( Module{"gitea", gitea.SupportedExt, gitea.NewGiteaConn } )
+	RegisterModule( Module{"email", email.SupportedExt, email.NewEmailConn } )
+}
+	\end{lstlisting}
+
+\section{Conclusion}
+	I really hope it helped you a bit.
+\end{document}
