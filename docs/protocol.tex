@@ -1,0 +1,89 @@
+\documentclass{article}
+\title{Centi network | Protocol}
+\author{Centi Project}
+
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\renewcommand\lstlistingname{Quelltext}
+
+\lstset{ % General setup for the package
+    language=Go,
+    numbers=left,
+    frame=tb,
+    tabsize=4,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    keepspaces,
+}
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+	Centi is a queue-based network which took main idea from HiddenLake. Briefly speaking,
+	it generates a fake package every random period of time and sends it to the network
+	in order to anonymize sender. It also sends a package to every network participant
+	to anonymize receiver.
+
+\section{General protocol overview}
+\section{Key exchange}
+	Centi combines both pre-quantum and post-quantum algorithms for key exchange. We use
+	x25519 and Kyber512 for key exchange. After that, shared secret is retrieved via HKDF
+	with SHA512 hash set. So even if attacker is able to break one of key exchange algorithms
+	the final shared secret will stay unknown.
+
+	Centi also uses pre-shared secrets in order to detect and prevent public key substitution
+	(MitM attack).
+
+	After successful key exchange, users encrypt their packages using ChaCha20Poly1305 algorithm.
+\section{Packages format}
+	General package strcture looks like this:
+	\begin{lstlisting}
+type Packet struct {
+	Head	PacketHead		`json:"h"`
+	Body	PacketBody		`json:"b"`
+}
+
+type PacketHead struct {
+	// typ of packet, just 1 digit
+	Typ		uint8		`json:"t"`
+
+	// sequence number (to identify, which packets were sent earlier)
+	Seq		uint64		`json:"s"`	
+	
+	// total parts of packet
+	Total		uint64		`json:"l"`
+
+	// if the total data in packets is compressed, 0 or 1
+	Compressed	uint8		`json:"c"`
+}
+
+type PacketBody struct {
+	// actual data. very situatively parameter,
+	// may be used for both `network` and
+	// `application` layers.
+	Data		string		`json:"d"`
+
+	// used in order to correctly decode data
+	OrigSize	uint		`json:"o"`
+
+	// some extra integrity check
+	Hmac		string		`json:"h"`
+}
+	\end{lstlisting}
+
+
+\section{Getting new peers info}
+	Peer info can be reset inside the network by known peers. If user does not want
+	to share their peers, Centi just sends an empty list of peers.
+
+\section{Other security-related features}
+
+\section{Conslusion}
+\end{document}
