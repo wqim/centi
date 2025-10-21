@@ -5,9 +5,9 @@ import (
 )
 
 type KnownPk struct {
-	Platform	string
-	Alias		string
-	Content		[]byte
+	Platform	string	`json:"platform"`
+	Alias		string	`json:"alias"`
+	Content		[]byte	`json:"content"`
 }
 
 type Connection interface{
