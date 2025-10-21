@@ -34,6 +34,10 @@ After that, build the project:
 ```
 make release
 ```
+Optinally, you can build the docs (you will need pdflatex for this):
+```
+cd docs && make
+```
 And then, you are able to run the binary. Centi comes not only as a pure network program, but it also has some other features.
 For example, your configuration is stored encrypted by default. This is why you are asked for password every time you are running the program.
 You can create any password on startup but you need to remember it and use every time you are running the network. There is no way to disable this feature ( except messing up with a code :D ) because of security considerations.
