@@ -6,6 +6,7 @@ import (
 	"strings"
 	"strconv"
 	"path/filepath"
+	"encoding/base64"
 	"centi/cryptography"
 )
 
@@ -19,7 +20,7 @@ const (
  * user-related functions which are required 
  * in order not to fuck up user with constant decrypt-edit-encrypt things.
  */
-func EditConfig( config, saltFile string, password []byte ) error {
+func EditConfig( config string, password, saltBytes []byte ) error {
 	// decrypt config, put it into temporary file, edit,
 	// read, shred temporary file and put encrypted configuration
 	// back.
@@ -39,11 +40,6 @@ func EditConfig( config, saltFile string, password []byte ) error {
 	data, err := os.ReadFile( config )
 	if err != nil {
 		return fmt.Errorf("Failed to read configuration: %s", err.Error() )
-	}
-
-	saltBytes, err := os.ReadFile( saltFile )
-	if err != nil {
-		return fmt.Errorf("Failed to read file with salt: %s", err.Error() )
 	}
 
 	key := cryptography.DeriveKey( password, saltBytes )
@@ -86,13 +82,8 @@ func EditConfig( config, saltFile string, password []byte ) error {
 	return os.WriteFile( config, data, 0660 )
 }
 
-func ReadLog( log, saltFile string, password []byte ) error {
+func ReadLog( log string, password, saltBytes []byte ) error {
 	// just read the logs and print it to the screen
-	saltBytes, err := os.ReadFile( saltFile )
-	if err != nil {
-		return fmt.Errorf("Failed to read file with salt: %s", err.Error() )
-	}
-
 	key := cryptography.DeriveKey( password, saltBytes )
 	data, err := os.ReadFile( log )
 	if err != nil {
@@ -113,6 +104,16 @@ func ReadLog( log, saltFile string, password []byte ) error {
 		return nil
 	}
 	fmt.Println( string(logs) )
+	return nil
+}
+
+func GenSalt() error {
+	saltBytes, err := cryptography.GenRandom( cryptography.SaltSize )
+	if err != nil {
+		return err
+	}
+	saltStr := base64.StdEncoding.EncodeToString( saltBytes )
+	fmt.Println("[+] Generated salt:", saltStr)
 	return nil
 }
 
