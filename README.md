@@ -27,7 +27,7 @@ It does not include actual address inside network packets, even your public key 
 ## Installation, Deveopment & Usage
 First of all, clone the repository:
 ```
-git clone 
+git clone https://github.com/wqim/centi
 ```
 
 After that, build the project:
