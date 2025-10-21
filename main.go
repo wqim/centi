@@ -17,6 +17,7 @@ const (
 	ConfigFilename = "config.json"
 	LogFilename = "log.log"
 	DbFilename = "db.db"
+	SaltFilename = "salt.bin"
 )
 
 func main() {
@@ -31,14 +32,19 @@ func main() {
 		fatal("Failed to read password from stdin:", err)
 	}
 
-	key := cryptography.DeriveKey( password )
-
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fatal("Failed to get home directory:", err)
 	}
-	// check if we have configuration
+	// read/generate salt
 	centiFolder := filepath.Join( home, CentiFolder )
+	saltBytes, err := getSalt( centiFolder )
+	if err != nil {
+		fatal("Failed to get salt bytes:", err)
+	}
+	
+	// check if we have configuration
+	key := cryptography.DeriveKey( password, saltBytes )
 	configFile := filepath.Join( centiFolder, ConfigFilename )
 	// if the application is installed for the first time, create all the
 	// things we need.
@@ -59,24 +65,42 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		// run the network
-		if err = local.RunCentiNetwork( configFile, password ); err != nil {
+		if err = local.RunCentiNetwork( configFile, password, saltBytes ); err != nil {
 			fatal( "Failed to run network:", err )
 		}
 	case "editconf":
 		// edit configuration in secure manner
-		if err = util.EditConfig( configFile, password ); err != nil {
+		if err = util.EditConfig( configFile, password, saltBytes ); err != nil {
 			fatal( "Failed to edit configuration:", err )
 		}
-
 	case "readlog":
 		// read network logs
 		logFile := filepath.Join( centiFolder, LogFilename )
-		if err := util.ReadLog( logFile, password ); err != nil {
+		if err := util.ReadLog( logFile, password, saltBytes ); err != nil {
 			fatal( "Failed to read log file:", err)
+		}
+	case "gensalt":
+		if err = util.GenSalt(); err != nil {
+			fatal("Failed to generate salt:", err)
 		}
 	default:
 		help()
 	}
+}
+
+func getSalt( centiFolder string ) ([]byte, error) {
+	saltFile := filepath.Join( centiFolder, SaltFilename )	
+	salt, err := os.ReadFile( saltFile )
+	if err != nil {
+		salt, err = cryptography.GenRandom( cryptography.SaltSize )
+		if err != nil {
+			return nil, err
+		}
+		if err = os.WriteFile( saltFile, salt, 0660 ); err != nil {
+			return nil, err
+		}
+	}
+	return salt, err
 }
 
 func defaultConfig( centiFolder string ) *config.FullConfig {
@@ -153,6 +177,7 @@ The following commands are supported:
 	run		run the network
 	editconf	edit configuration
 	readlog		read log file
+	gensalt		generate base64-encoded salt for password
 `
 
 	fmt.Printf("%s", line)
