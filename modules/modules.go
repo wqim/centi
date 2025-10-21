@@ -11,8 +11,9 @@ import (
 	"centi/modules/huggingface"
 	//"centi/modules/bluetooth"
 	//"centi/modules/p2p"
-	"centi/modules/tls"
+	tls "centi/modules/tls"
 	ssh "centi/modules/ssh"
+	uni "centi/modules/universal"
 )
 
 /* TODO:
@@ -74,4 +75,7 @@ func InitAllModules() {
 	//RegisterModule( Module{"p2p", p2p.SupportedExt, p2p.NewP2PConn } )
 	RegisterModule( Module{"tls", tls.SupportedExt, tls.NewNetConn } )
 	RegisterModule( Module{"ssh", ssh.SupportedExt, ssh.NewSshConn} )
+	
+	// universal connection (microservice connector)
+	RegisterModule( Module{"universal", uni.SupportedExt, uni.NewUniConn} )
 }
