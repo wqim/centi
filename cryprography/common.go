@@ -197,7 +197,7 @@ func DecodeData( data string ) ([]byte, error) {
 	//return base64.StdEncoding.DecodeString( data )
 }
 
-// format: <salt>:<password>
+// format: <base64-encoded-salt>:<password>
 func SplitWithSalt( password string ) ([]byte, []byte, error) {
 	parts := strings.Split( password, ":" )
 	if len(parts) < 2 {
@@ -218,9 +218,7 @@ func SplitWithSalt( password string ) ([]byte, []byte, error) {
 func DeriveKey( password, saltBytes []byte ) []byte {
 	/*
 	 * the draft RFC recommends time=3 and memory=32*1024 (32 MB) is a sensible number.
-	 * TODO: change the salt derivation method...
 	 */
-	//saltBytes := []byte( base64.StdEncoding.EncodeToString( password ) )
 	threads := uint8(runtime.NumCPU())
 	key := argon2.Key( password, saltBytes, 3, 32 * 1024, threads, SymKeySize )
 	return key
