@@ -32,6 +32,7 @@ func(q *Queue) RunNetwork() {
 				} else {
 					packet = &protocol.Message{
 						"",
+						"",
 						packets[0],
 						protocol.UnknownSender,
 						false,	// do not optimize this anymire
@@ -40,6 +41,7 @@ func(q *Queue) RunNetwork() {
 					if len(packets) > 1 {
 						for i := 1; i < len(packets); i++ {
 							msg := &protocol.Message{
+								"",
 								"",
 								packets[i],
 								protocol.UnknownSender,
@@ -59,6 +61,7 @@ func(q *Queue) RunNetwork() {
 
 				// pack random data in order not to distinguish fake packets from real ones.
 				packet = &protocol.Message{
+					"",
 					"",
 					packetData,
 					protocol.UnknownSender,
@@ -144,6 +147,7 @@ func(q *Queue) RequestPublicKeys( peer *protocol.Peer ) {
 	if err == nil {
 		// just send a packet
 		msg := &protocol.Message{
+			"",
 			"",
 			packet,
 			protocol.UnknownSender,
@@ -278,6 +282,7 @@ func(q *Queue) handleRetransmitPacket( data []byte ) {
 	// resend a cleared packet in queue
 	newMsg := &protocol.Message{
 		"",
+		"",
 		data,
 		protocol.UnknownSender,
 		false,	// do not optimize this packet.
@@ -301,6 +306,7 @@ func(q *Queue) handlePkRequest( pct *protocol.Packet, data []byte, peer *protoco
 			for _, p := range packets {
 				msg := &protocol.Message{
 					"",
+					"",
 					p,
 					protocol.UnknownSender,
 					false,	// don't take it into account during packet optimization
@@ -323,6 +329,7 @@ func(q *Queue) handlePkRequest( pct *protocol.Packet, data []byte, peer *protoco
 		} else {
 			for _, p := range packets {
 				msg := &protocol.Message{
+					"",
 					"",
 					p,
 					protocol.UnknownSender,
@@ -387,6 +394,7 @@ func(q *Queue) handleDataPacket( pct *protocol.Packet, data []byte, peer *protoc
 		// have only one packet, skip the opera
 		newMsg := &protocol.Message{
 			"",
+			"",
 			data,
 			peer.Alias,
 			false,
@@ -406,6 +414,7 @@ func(q *Queue) handleDataPacket( pct *protocol.Packet, data []byte, peer *protoc
 	data = q.msgHandler.ByAlias( peer.Alias )
 	if data != nil {
 		newMsg := &protocol.Message{
+			"",
 			"",
 			data,
 			peer.Alias,
