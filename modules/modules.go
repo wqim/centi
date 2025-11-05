@@ -23,7 +23,7 @@ import (
  */
 type Module struct {
 	Name		string
-	SupportedExt	[]string	// list of supported files extensions
+	//SupportedExt	[]string	// list of supported files extensions
 	Contructor	func( map[string]string, []config.Channel ) (protocol.Connection, error)
 }
 
@@ -67,15 +67,15 @@ func UnregisterModule( name string ) error {
 }
 
 func InitAllModules() {
-	RegisterModule( Module{"github", github.SupportedExt, github.NewGitHubConn } )
-	RegisterModule( Module{"huggingface", huggingface.SupportedExt, huggingface.NewHuggingfaceConn } )
-	RegisterModule( Module{"gitea", gitea.SupportedExt, gitea.NewGiteaConn } )
-	RegisterModule( Module{"email", email.SupportedExt, email.NewEmailConn } )
+	RegisterModule( Module{"github", /*github.SupportedExt,*/ github.NewGitHubConn } )
+	RegisterModule( Module{"huggingface", /*huggingface.SupportedExt,*/ huggingface.NewHuggingfaceConn } )
+	RegisterModule( Module{"gitea", /*gitea.SupportedExt,*/ gitea.NewGiteaConn } )
+	RegisterModule( Module{"email", /*email.SupportedExt,*/ email.NewEmailConn } )
 	//RegisterModule( Module{"bluetooth", bluetooth.SupportedExt, bluetooth.NewBluetoothConn } )
 	//RegisterModule( Module{"p2p", p2p.SupportedExt, p2p.NewP2PConn } )
-	RegisterModule( Module{"tls", tls.SupportedExt, tls.NewNetConn } )
-	RegisterModule( Module{"ssh", ssh.SupportedExt, ssh.NewSshConn} )
+	RegisterModule( Module{"tls", /*tls.SupportedExt,*/ tls.NewNetConn } )
+	RegisterModule( Module{"ssh", /*ssh.SupportedExt,*/ ssh.NewSshConn} )
 	
 	// universal connection (microservice connector)
-	RegisterModule( Module{"universal", uni.SupportedExt, uni.NewUniConn} )
+	RegisterModule( Module{"universal", /*uni.SupportedExt,*/ uni.NewUniConn} )
 }
