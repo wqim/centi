@@ -198,8 +198,8 @@ func(g GitHubConn) Send( msg *protocol.Message ) error {
 		sha = msg.Args[ ShaKey ]
 	}
 
-	msgData := base64.StdEncoding.EncodeToString( msg.Data )
-	return g.UploadFile( msg.Args[ RepoKey ], g.config.SendBranch, msg.Args[ FileKey ], sha, []byte(msgData) )
+	//msgData := base64.StdEncoding.EncodeToString( msg.Data )
+	return g.UploadFile( msg.Args[ RepoKey ], g.config.SendBranch, msg.Args[ FileKey ], sha, msg.Data )
 }
 
 /*
@@ -266,6 +266,7 @@ func(g GitHubConn) RecvAll() ([]*protocol.Message, error) {
 						f.Content, err = base64.StdEncoding.DecodeString( string(content) )
 						if err == nil {
 							msg := &protocol.Message{
+								f.Name,
 								g.Name(),
 								f.Content,
 								protocol.UnknownSender, //???
@@ -391,6 +392,7 @@ func(g GitHubConn) DeleteChannel( c *config.Channel ) error {
 func(gh GitHubConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	repoName := gh.config.SendTo[ util.RandInt(len(gh.config.SendTo)) ]
 	msg := &protocol.Message{
+		"",
 		gh.Name(),
 		data,
 		protocol.UnknownSender,
@@ -405,4 +407,8 @@ func(gh GitHubConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 
 func(gh GitHubConn) Name() string {
 	return "github"
+}
+
+func(gh GitHubConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
