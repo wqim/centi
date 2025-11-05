@@ -251,6 +251,7 @@ func(p P2PConn) RecvAll() ([]*protocol.Message, error) {
 
 func(p P2PConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	msg := &protocol.Message{
+		"",
 		p.Name(),
 		data,
 		protocol.UnknownSender,
@@ -262,4 +263,8 @@ func(p P2PConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 
 func(p P2PConn) Name() string {
 	return moduleName
+}
+
+func(p P2PConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
