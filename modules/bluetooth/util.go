@@ -23,6 +23,7 @@ func(b BluetoothConn) Name() string {
 
 func(b BluetoothConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	msg := &protocol.Message{
+		"",
 		b.Name(),
 		data,
 		protocol.UnknownSender,
@@ -36,6 +37,10 @@ func(b BluetoothConn) MessageFromBytes( data []byte ) (*protocol.Message, error)
 // but must be created anyway
 func(b BluetoothConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
 	return nil, nil
+}
+
+func(b BluetoothConn) Delete( msg *protocol.Message ) error {
+	return nil
 }
 
 func(b BluetoothConn) Delete( msg *protocol.Message ) error {
