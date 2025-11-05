@@ -30,6 +30,7 @@ func(n *NetConn) Close() {
 
 func(n NetConn) MessageFromBytes(data []byte)  (*protocol.Message, error) {
 	return &protocol.Message{
+		"",
 		Name,
 		data,
 		protocol.UnknownSender,
