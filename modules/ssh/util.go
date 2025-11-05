@@ -135,6 +135,7 @@ func handleConnection(
 			if req.Type == MsgRequestType {
 				util.DebugPrintln("(ssh::handleConnection): got message from client:", len(req.Payload))
 				msg := &protocol.Message{
+					"",
 					Name,
 					req.Payload,
 					AddrToAlias( conn.RemoteAddr().String() ),
@@ -171,6 +172,7 @@ func handleConnection(
 		 if req.Type == MsgRequestType {
 			 util.DebugPrintln("[ssh::handleIncomingMessages]: got message from server:", len(req.Payload))
 			 msg := &protocol.Message{
+				 "",
 				 Name,
 				 req.Payload,
 				 AddrToAlias( conn.RemoteAddr().String() ),
