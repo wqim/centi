@@ -38,9 +38,18 @@ type UniConn struct {
 	addr		string			// address of service
 	headers		map[string]string	// reserved for future use..?
 	channels	[]config.Channel
+	supExt		[]string		// supported files extensions
 }
 
 func NewUniConn( args map[string]string, channels []config.Channel ) (protocol.Connection, error) {
+
+	supExt := []string{}
+
+	sext, ok := args["files_extensions"]
+	if ok {
+		supExt = strings.Split( sext, "," )
+	}
+
 	conn := UniConn{
 		args["name"],
 		args["addr"],
@@ -48,6 +57,7 @@ func NewUniConn( args map[string]string, channels []config.Channel ) (protocol.C
 			"Content-Type": "application/json",
 		},
 		channels,
+		supExt,
 	}
 	util.DebugPrintln("New universal connection:", conn.name, "at", conn.addr)
 	margs := map[string]any{}
@@ -207,12 +217,12 @@ func(u UniConn) RecvAll() ([]*protocol.Message, error) {
 	// get a list of messages received by microservice
 	tmp, ok := resp.Args["messages"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Invalid response format: failed to get incoming messages")
+		return nil, fmt.Errorf("[??????????] Invalid response format: failed to get incoming messages")
 	}
 	for _, item := range tmp {
 		mp, ok := item.(map[string]any)
 		if !ok {
-			util.DebugPrintln("Failed to convert Item:", item)
+			util.DebugPrintln("[!!!!!!!!!!] Failed to convert Item:", item)
 		} else {
 			var msg protocol.Message
 			skipMessage := false
@@ -281,6 +291,7 @@ func(u UniConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
 	}
 
 	msg := protocol.Message{
+		args["msg_name"],
 		u.Name(),
 		data,
 		protocol.UnknownSender,
@@ -322,6 +333,7 @@ func(u UniConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	}
 
 	msg := &protocol.Message{
+		args["msg_name"],
 		u.Name(),
 		data,
 		protocol.UnknownSender,
@@ -336,6 +348,10 @@ func(u UniConn) Name() string {
 		return u.name
 	}
 	return DefaultModuleName
+}
+
+func(u UniConn) GetSupportedExtensions() []string {
+	return u.supExt
 }
 
 func anyErrorOccured( resp *APIResponse ) error {
