@@ -145,6 +145,7 @@ func connectToPeer( w http.ResponseWriter, r *http.Request,
 						timestamp = time.Now().Unix()
 						packet := &protocol.Message{
 							"",
+							"",
 							encapsulated,
 							protocol.UnknownSender,
 							false,	// not a data packet, don't optimize
@@ -199,6 +200,7 @@ func handleRequest( w http.ResponseWriter, r *http.Request,
 						util.DebugPrintln("Real data (got from user):")
 						util.DebugPrintln( string(realData) )
 						queue.PushPacket( p, &protocol.Message{
+							"",
 							"",
 							realData,
 							protocol.UnknownSender,
