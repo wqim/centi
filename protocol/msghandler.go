@@ -13,14 +13,14 @@ const (
 )
 
 type Message struct {
-
 	// i want to refactor this
-	Platform	string			`json:"platform"` // may be neccessary
+	Name		string			`json:"name"`		// filename or empty string
+	Platform	string			`json:"platform"`	// may be neccessary
 	Data		[]byte			`json:"data"`
 	// alias of the sender (peer alias)
 	// or empty string for unknown, or magic string for us.
 	Sender		string			`json:"sender"`
-	SentByUs	bool			`json:"sent_by_us"`// check if the message was sent by us
+	SentByUs	bool			`json:"sent_by_us"`	// check if the message was sent by us
 	// i don't really think we need this, but may be used by modules
 	Args		map[string]string	`json:"args"`
 }
