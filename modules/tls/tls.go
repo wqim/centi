@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/base64"
 
+	
 	"centi/util"
 	"centi/config"
 	"centi/protocol"
@@ -267,6 +268,7 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 			util.DebugPrintln("[SERVER] Received message:", totalReceived, "bytes." ) //, string(buf))
 			// other messages are just normal messages
 			received <- &protocol.Message{
+				"",
 				Name,
 				lastPacket,
 				AddrToAlias( conn.RemoteAddr().String() ),
@@ -396,6 +398,7 @@ func receiveMessagesInBackground( bufferSize uint, peer *Peer ) {
 		if err == nil {
 			util.DebugPrintln("Got message from ", peer.conn.RemoteAddr().String())
 			msg := &protocol.Message{
+				"",
 				Name,
 				buf[:nbytes],
 				AddrToAlias( peer.conn.RemoteAddr().String() ),
@@ -491,4 +494,8 @@ func channelsToPeers( bufferSize uint, channels []config.Channel ) *[]*Peer {
 	}
 	util.DebugPrintln("[+] Connected to", len(peers), "peers.")
 	return &peers
+}
+
+func(n NetConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
