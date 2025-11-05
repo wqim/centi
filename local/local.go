@@ -48,6 +48,7 @@ func RunCentiNetwork( configFile string, password, saltBytes []byte ) error {
 	connections := protocol.NewConnManagement(
 		conns,
 		&fullConfig.NetworkConfig,
+		&fullConfig.StegConfig,
 		cryptClient,
 	)
 
