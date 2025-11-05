@@ -203,8 +203,8 @@ func(hf HuggingfaceConn) Send( msg *protocol.Message ) error {
 		}
 		hf.repos = append( hf.repos, repo )
 	}
-	content := base64.StdEncoding.EncodeToString( msg.Data )
-	return hf.UploadFile( repo, msg.Args[FileKey], []byte(content) )
+	//content := base64.StdEncoding.EncodeToString( msg.Data )
+	return hf.UploadFile( repo, msg.Args[FileKey], msg.Data )
 }
 
 func(hf HuggingfaceConn) RecvAll() ( []*protocol.Message, error ) {
@@ -254,6 +254,7 @@ func(hf HuggingfaceConn) RecvAll() ( []*protocol.Message, error ) {
 				if err == nil {
 					f.Content = content
 					msg := &protocol.Message{
+						f.Name,
 						hf.Name(),
 						f.Content,
 						protocol.UnknownSender, //???
@@ -406,6 +407,7 @@ func(hf HuggingfaceConn) DeleteChannel( c *config.Channel ) error {
 func(hf HuggingfaceConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	repoName := hf.config.SendTo[ util.RandInt(len(hf.config.SendTo)) ]
 	msg := &protocol.Message{
+		"",
 		hf.Name(),
 		data,
 		protocol.UnknownSender,
@@ -420,4 +422,8 @@ func(hf HuggingfaceConn) MessageFromBytes( data []byte ) (*protocol.Message, err
 
 func(hf HuggingfaceConn) Name() string {
 	return "huggingface"
+}
+
+func(hf HuggingfaceConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
