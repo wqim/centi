@@ -199,6 +199,7 @@ func(s SshConn) Name() string {
 
 func(s SshConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	msg := &protocol.Message{
+		"",
 		Name,
 		data,
 		protocol.UnknownSender,
@@ -292,4 +293,8 @@ func(s SshConn) RecvAll() ([]*protocol.Message, error) {
 		msgs = append( msgs, msg )
 	}
 	return msgs, nil
+}
+
+func(s SshConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
