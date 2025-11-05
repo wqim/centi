@@ -22,14 +22,9 @@ const (
 
 func main() {
 
-	if len( os.Args ) < 2 {
+	if len( os.Args ) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		help()
 		return
-	}
-
-	password, err := util.GetPasswd("Password: ")
-	if err != nil {
-		fatal("Failed to read password from stdin:", err)
 	}
 
 	home, err := os.UserHomeDir()
@@ -38,9 +33,30 @@ func main() {
 	}
 	// read/generate salt
 	centiFolder := filepath.Join( home, CentiFolder )
+
+	_, err = os.ReadDir( centiFolder )
+	if err != nil {
+		// folder unexistend, creating it.
+		if err = os.Mkdir( centiFolder, 0760 ); err != nil {
+			fatal("Failed to create Centi directory in user's home folder:", err)
+		}
+	}
+	
+	// the only command which must be handled before reading password from stdin
+	if os.Args[1] == "gensalt" {
+		if err = util.GenSalt(); err != nil {
+			fatal("Failed to generate salt:", err)
+		}
+		return
+	}
+
 	saltBytes, err := getSalt( centiFolder )
 	if err != nil {
 		fatal("Failed to get salt bytes:", err)
+	}
+	password, err := util.GetPasswd("Password: ")
+	if err != nil {
+		fatal("Failed to read password from stdin:", err)
 	}
 	
 	// check if we have configuration
@@ -79,15 +95,41 @@ func main() {
 		if err := util.ReadLog( logFile, password, saltBytes ); err != nil {
 			fatal( "Failed to read log file:", err)
 		}
-	case "gensalt":
-		if err = util.GenSalt(); err != nil {
-			fatal("Failed to generate salt:", err)
+	case "changekeys":
+		if err = ChangeKeys( configFile, password, saltBytes ); err != nil {
+			fatal( "Failed to change keys pair:", err )
 		}
 	default:
 		help()
 	}
 }
 
+func ChangeKeys( configFile string, password, saltBytes []byte ) error {
+
+	// read configuration
+	key := cryptography.DeriveKey( password, saltBytes )
+	conf, err := config.LoadConfig( configFile, key )
+	if err != nil {
+		return err
+	}
+	// generate new asymetric keys
+	cr, err := cryptography.NewClient()
+	if err != nil {
+		return err
+	}
+	sk, err := cr.SkToString()
+	if err != nil {
+		return err
+	}
+	// save this, don't touch anything else.
+	keys := config.KeysConfig{
+		Pk: cr.PkToString(),
+		Sk: sk,
+		Peers: conf.Keys.Peers,
+	}
+	conf.Keys = keys
+	return config.SaveConfig( configFile, key, conf )
+}
 func getSalt( centiFolder string ) ([]byte, error) {
 	saltFile := filepath.Join( centiFolder, SaltFilename )	
 	salt, err := os.ReadFile( saltFile )
@@ -178,6 +220,7 @@ The following commands are supported:
 	editconf	edit configuration
 	readlog		read log file
 	gensalt		generate base64-encoded salt for password
+	changekeys	change public/private key pairs
 `
 
 	fmt.Printf("%s", line)
