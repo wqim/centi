@@ -103,9 +103,9 @@ func(e EmailConn) Delete( msg *protocol.Message ) error {
 
 // actually need realisation
 func(e EmailConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
-	// TODO: add steganography
 	tmpMsg := &protocol.Message{
 		"",
+		e.Name(),
 		pk,
 		protocol.UnknownSender,
 		false,
@@ -116,7 +116,6 @@ func(e EmailConn) DistributePk( p *config.DistributionParameters, pk []byte ) er
 }
 
 func(e EmailConn) CollectPks( p *config.DistributionParameters ) ([]protocol.KnownPk, error) {
-	// TODO
 	msgs, err := e.RecvAll()
 	if err != nil {
 		return nil, err
@@ -236,6 +235,7 @@ func(e EmailConn) RecvAll() ([]*protocol.Message, error) {
 
 					sender := from[0].Address
 					tmpMsg := protocol.Message{
+						"",
 						e.Name(),
 						msgData,
 						sender,
@@ -252,6 +252,7 @@ func(e EmailConn) RecvAll() ([]*protocol.Message, error) {
 
 func(e EmailConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	msg := &protocol.Message{
+		"",
 		e.Name(),
 		data,
 		protocol.UnknownSender,
@@ -263,4 +264,8 @@ func(e EmailConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 
 func(e EmailConn) Name() string {
 	return "email"
+}
+
+func(e EmailConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
