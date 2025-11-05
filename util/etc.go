@@ -1,10 +1,23 @@
 package util
 import (
+	"strings"
 	/*"strconv"
 	"crypto/sha512"
 	"centi/cryptography" */
 )
 
+func PrepareFilename( filename string ) string {
+	parts := strings.Split( filename, "/" )
+	if len(parts) == 1 {
+		parts = strings.Split( filename, "\\" )
+	}
+	part := parts[ len(parts) - 1 ]
+	parts = strings.Split( part, "." )
+	if len(parts) == 2 {
+		return GenFilename( parts[0], parts[1] )
+	}
+	return part
+}
 
 func MapContains( mp map[string]string, key string ) bool {
 	for k, _ := range mp {
