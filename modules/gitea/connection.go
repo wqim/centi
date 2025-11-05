@@ -207,12 +207,14 @@ func(g GiteaConn) Send( msg *protocol.Message ) error {
 		sha = msg.Args[ ShaKey ]
 	}
 
+	msg.Args[ FileKey ] = msg.Name
 	filename := msg.Args[ RepoKey ] + ":" + msg.Args[ FileKey ]
 	hash := cryptography.Hash( msg.Data )
 	g.sentMessages[ hash ] = filename
 
-	msgData := base64.StdEncoding.EncodeToString( msg.Data )
-	return g.UploadFile( msg.Args[ RepoKey ], g.config.SendBranch, msg.Args[ FileKey ], sha, []byte(msgData) )
+	//util.DebugPrintln("[GiteaConn::Send()] data =", string(msg.Data) )
+	//msgData := base64.StdEncoding.EncodeToString( msg.Data )
+	return g.UploadFile( msg.Args[ RepoKey ], g.config.SendBranch, msg.Args[ FileKey ], sha, msg.Data )
 }
 
 /*
@@ -277,11 +279,12 @@ func(g GiteaConn) RecvAll() ([]*protocol.Message, error) {
 					
 					content, err := g.DownloadFile( repo, g.config.ReceiveBranch, f.Name )
 					if err == nil {
-						f.Content, err = base64.StdEncoding.DecodeString( string(content) )
-						if err == nil {
+						//f.Content, err = base64.StdEncoding.DecodeString( string(content) )
+						//if err == nil {
 							msg := &protocol.Message{
+								f.Name,
 								g.Name(),
-								f.Content,
+								content, //f.Content,
 								protocol.UnknownSender, //???, everything is ok, we detemine sender by key
 								false,
 								map[string]string{
@@ -292,7 +295,7 @@ func(g GiteaConn) RecvAll() ([]*protocol.Message, error) {
 								},
 							}
 							messages = append( messages, msg )
-						} /*else {
+						/*else {
 							util.DebugPrintln("Failed to decode file content:", err)
 							util.DebugPrintln("File content:", string(content))
 							// finalError = err
@@ -332,6 +335,7 @@ func(g GiteaConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
 		delete( g.sentMessages, hash )	// we are going to delete this file, so drop it anyway.
 
 		return &protocol.Message{
+			fileName,
 			g.Name(),
 			data,
 			protocol.UnknownSender,
@@ -439,6 +443,7 @@ func(g GiteaConn) DeleteChannel( c *config.Channel ) error {
 func(g GiteaConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	repoName := g.config.SendTo[ util.RandInt(len(g.config.SendTo)) ]
 	msg := &protocol.Message{
+		"",
 		g.Name(),
 		data,
 		protocol.UnknownSender,
@@ -453,4 +458,8 @@ func(g GiteaConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 
 func(g GiteaConn) Name() string {
 	return "gitea"
+}
+
+func(g GiteaConn) GetSupportedExtensions() []string {
+	return SupportedExt
 }
