@@ -393,3 +393,7 @@ func(b BluetoothConn) RecvAll() ( []*protocol.Message, error ) {
 		msgs = append( msgs, <- received )
 	}
 }
+
+func(b BluetoothConn) GetSupportedExtensions() []string {
+	return SuportedExt
+}
