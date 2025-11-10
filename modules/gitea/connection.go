@@ -1,13 +1,13 @@
 package gitea
 import (
-	"os"
+	//"os"
 	"fmt"
 	"sync"
 	"encoding/json"
-	"encoding/base64"
+	//"encoding/base64"
 	"strings"
 
-	"centi/stegano/img"
+	//"centi/stegano/img"
 
 	"centi/util"
 	"centi/config"
@@ -138,6 +138,7 @@ func(g GiteaConn) DeleteChannels() error {
 	return nil
 }
 
+/*
 func(g GiteaConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	// gitea supports avatar upload via api
 	// let's use this advantage in order to distribute public keys
@@ -153,7 +154,7 @@ func(g GiteaConn) DistributePk( p *config.DistributionParameters, pk []byte ) er
 	if err != nil {
 		return err
 	}
-	os.WriteFile("test/tmp-avatar-encoded.png", newImg, 0660) 	// for debug
+	//os.WriteFile("test/tmp-avatar-encoded.png", newImg, 0660) 	// for debug
 	base64Image := base64.StdEncoding.EncodeToString( newImg )
 	payload := map[string]string{
 		"image": base64Image,
@@ -182,12 +183,12 @@ func(g GiteaConn) CollectPks( p *config.DistributionParameters ) ([]protocol.Kno
 			finalError = err
 			//util.DebugPrintln("Failed to download avatar:", finalError)
 		} else {
-			os.WriteFile("test/tmp-avatar.png", imgBytes, 0660) 	// for debug
+			//os.WriteFile("test/tmp-avatar.png", imgBytes, 0660) 	// for debug
 			pkBytes, err := img.DecodeFromLSB( img.RMode | img.GMode | img.BMode, imgBytes )
 			if err == nil && len(pkBytes) > cryptography.PkSize {
 				keys = append( keys, protocol.KnownPk{
-					"gitea",
-					u,
+					g.Name(),
+					g.Name() + ":" + u,
 					pkBytes,
 				})
 				//util.DebugPrintln("Collected public key:", base64.StdEncoding.EncodeToString( pkBytes[:10] ) )
@@ -196,6 +197,7 @@ func(g GiteaConn) CollectPks( p *config.DistributionParameters ) ([]protocol.Kno
 	}
 	return keys, finalError
 }
+*/
 
 // send message to the platform.
 func(g GiteaConn) Send( msg *protocol.Message ) error {
@@ -313,51 +315,19 @@ func(g GiteaConn) RecvAll() ([]*protocol.Message, error) {
 	return messages, finalError
 }
 
-func(g GiteaConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
-
-	g.messagesMtx.Lock()
-	defer g.messagesMtx.Unlock()
-
-	hash := cryptography.Hash( data )
-	if util.MapContains( g.sentMessages, hash ) == true {
-
-		// file exists, must always be true
-		filename := g.sentMessages[ hash ]
-		parts := strings.Split( filename, ":" )
-		repoName := parts[0]
-		fileName := parts[1]
-		//util.DebugPrintln("Found duplicate file at ", filename)
-		sha, err := g.getFileSha( repoName, fileName )
-		if err != nil {
-			return nil, err
-		}
-
-		delete( g.sentMessages, hash )	// we are going to delete this file, so drop it anyway.
-
-		return &protocol.Message{
-			fileName,
-			g.Name(),
-			data,
-			protocol.UnknownSender,
-			false, // don't optimize this (does not really matter)
-			map[string]string{
-				RepoKey: repoName,
-				BranchKey: g.config.SendBranch,
-				FileKey: fileName,
-				ShaKey: sha,
-			},
-		}, nil
-	}
-
-	// no file found but no error also occured
-	//util.DebugPrintln("[-----] Did not find the file with specified SHA.")
-	return nil, nil
-}
 
 // delete message (file) from channel (repository)
 func(g GiteaConn) Delete( msg *protocol.Message ) error {
 	var err error
 	if msg != nil {
+		
+		for _, schan := range g.config.SendTo {
+			if g.FileExists( schan, g.config.SendBranch, msg.Name ) {
+				msg.Args[ RepoKey ] = schan
+				break
+			}
+		}
+		
 		sha := ""
 		if util.MapContains( msg.Args, ShaKey ) == true {
 			sha = msg.Args[ ShaKey ]
@@ -377,7 +347,7 @@ func(g GiteaConn) Delete( msg *protocol.Message ) error {
 		}
 		args := map[string]string{FileKey: msg.Args[ FileKey ], ShaKey: sha, RepoKey: msg.Args[ RepoKey ] }
 		url := g.formatURL( general.DeleteKey, args )
-
+		//util.DebugPrintln("[GiteaConn]: url =", url, "; args =", args)
 		_, err = g.sendRequest( url, general.DeleteKey, packed )
 	}
 	return err
