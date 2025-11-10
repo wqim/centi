@@ -21,44 +21,41 @@ func(q *Queue) RunNetwork() {
 		//util.DebugPrintln("Length of incoming packets queue:", len(q.incoming))
 
 		if len(q.queue) == 0 {	// check if we have a packet in the queue at all
-			//util.DebugPrintln("[-] Did not find a packet in the queue, generating a new one...")
+			util.DebugPrintln("[-] Did not find a packet in the queue, spawning a new one...")
 			// generate a random packet, if there is no existing packet.
 			if q.packetsBuf.Len() > 0 {
 				// get packets from the queue...?
-				//util.DebugPrintln("[*] We are able to take packets from the buffer.")
+				util.DebugPrintln("[*] We are able to take packets from the buffer.")
 				packets, err := q.packetsBuf.Next()
 				if err != nil {
 					q.Logger.LogError( err )
 				} else {
-					packet = &protocol.Message{
-						"",
-						"",
-						packets[0],
-						protocol.UnknownSender,
-						false,	// do not optimize this anymire
-						map[string]string{},
-					}
-					if len(packets) > 1 {
-						for i := 1; i < len(packets); i++ {
-							msg := &protocol.Message{
-								"",
-								"",
-								packets[i],
-								protocol.UnknownSender,
-								false,
-								map[string]string{},
-							}
+					util.DebugPrintln("Amount of packets in q.packetsBuf.Next() =", len(packets))
+					for i := 0; i < len(packets); i++ {
+						msg := &protocol.Message{
+							"",
+							"",
+							packets[i],
+							protocol.UnknownSender,
+							false,
+							map[string]string{},
+						}
+						if q.IsClosed() {
+							return
+						}
+						if i == 0 {
+							packet = msg
+						} else {
 							q.queue <- msg
 						}
 					}
 				}
 			} else {
-				//util.DebugPrintln("Generating random packet....")
+				util.DebugPrintln("Generating random packet....")
 				packetData, err := cryptography.GenRandom( q.conn.Config.PacketSize )
 				if err != nil {
 					q.Logger.LogError( err )
 				}
-
 				// pack random data in order not to distinguish fake packets from real ones.
 				packet = &protocol.Message{
 					"",
@@ -72,12 +69,16 @@ func(q *Queue) RunNetwork() {
 				}
 			}
 		} else {
+			if q.IsClosed() {
+				return
+			}
+
 			packet, ok = <- q.queue
 			if !ok { // outcoming messages queue is closed
 				break
 			}
-			//util.DebugPrintln( util.CyanColor + "[+] Found packet in the queue:" + util.ResetColor,
-			//	cryptography.Hash(packet.Data))
+			util.DebugPrintln( util.CyanColor + "[+] Found packet in the queue:" + util.ResetColor,
+				cryptography.Hash(packet.Data))
 		}
 
 		// 2. send packet if it was not sent yet
@@ -105,17 +106,15 @@ func(q *Queue) RunNetworkBackground() {
 			q.Logger.LogError( err )
 		}
 		util.DebugPrintf("[protocol::RunNetworkBackground] got %d messages\n", len(messages))
-		for _, m := range messages {	
+		for _, m := range messages {
 			// check if the message is a valid packet which was not handled before
 			if uint(len(m.Data)) == q.conn.Config.PacketSize {
 				if indb, _ := q.db.IsInDB( m.Data ); indb == false {
 					// we should resend the message in order not to
 					// deanonymize ourselves (if we are a receiver).
-					if q.closed {
+					if q.IsClosed() {
 						return
 					}
-
-					//q.queue <- m	// this is bullshit
 					// resend message right after we got it
 					// or our queue will increase infinitely.
 					if err = q.db.AddPacket( m.Data ); err != nil {
@@ -154,7 +153,7 @@ func(q *Queue) RequestPublicKeys( peer *protocol.Peer ) {
 			false,	// do not take it into account during packet optimization.
 			map[string]string{},
 		}
-		if q.closed {
+		if q.IsClosed() {
 			return
 		}
 		q.queue <- msg
@@ -167,32 +166,40 @@ func(q *Queue) tryDecrypt(m *protocol.Message ) bool {
 	// check if we are able to decrypt the message
 	for _, peer := range q.conn.GetPeers() {
 		if peer.ValidSymKey() == false {
+			util.DebugPrintln("invalid symmetric key for peer", peer.GetAlias())
 			continue
 		}
 
 		pct, err := peer.Unpack( m.Data, q.conn.Config.PacketSize )
 		if err == nil {
+			// nice, decrypted.
+			//util.DebugPrintln("[+] Decrypted.")
 			data, err := cryptography.DecodeData( pct.Body.Data )
 			if err == nil {
+				//util.DebugPrintln("[+] Decoded.")
+				// amazing, we managed to decode it.
 				if uint(len(data)) >= pct.Body.OrigSize {
 					data = data[:pct.Body.OrigSize]
 				}
-				if pct.Head.Compressed != uint8(0) {
+				//util.DebugPrintln("[+] Cut data.")
+				if pct.Head.Total == 1 && pct.Head.Compressed != uint8(0) {
 					// data in the packet is compressed.
 					// decompress it.
+					//util.DebugPrintln("[*] Data required decompression")
 					data, err = protocol.Decompress( data )
 					if err != nil {
 						// failed to correctly decrypt packet.
+						util.DebugPrintln("[-] Failed to decompress data:", err)
 						return false
 					}
-				}
-				util.DebugPrintln("Unpacked data:", string(data))
+					//util.DebugPrintln("[+] Decompressed.")
+				} /*else {
+					util.DebugPrintln("[*] Data do not require decompression.")
+				}*/
+				// got unpacked data.
+				//util.DebugPrintln("Unpacked data:", string(data))
 				decrypted = true
 				switch pct.Head.Typ {
-				case protocol.RetransmitPct: // we must resend the packet
-					//util.DebugPrintln("Handling retransmit packate")
-					q.handleRetransmitPacket( data )
-
 				case protocol.PkReqPct:
 					//util.DebugPrintln("Handling public key request package")
 					q.handlePkRequest( pct, data, peer )
@@ -204,15 +211,17 @@ func(q *Queue) tryDecrypt(m *protocol.Message ) bool {
 				case protocol.DataPct: // does the packet contains data?
 					//util.DebugPrintln("Handling message from peer")
 					q.handleDataPacket( pct, data, peer )
+				default:
+					util.DebugPrintln("Typ of packet:", pct.Head.Typ)
 				}
 			} /*else {
 				util.DebugPrintln("[queue::tryDecrypt] failed to decode data:", err)
 			}*/
 			break
-		} //else {
-			//util.DebugPrintf("[queue::tryDecrypt] peer %s failed to unpack data: %s\n",
-			//	peer.GetAlias(), err.Error())
-		// }
+		} /*else {
+			util.DebugPrintf("[queue::tryDecrypt] peer %s failed to unpack data: %s\n",
+				peer.GetAlias(), err.Error())
+		}*/
 	}
 	return decrypted
 }
@@ -220,7 +229,7 @@ func(q *Queue) tryDecrypt(m *protocol.Message ) bool {
 func(q *Queue) tryKeyExchange(m *protocol.Message ) {
 	if q.conn.Config.AcceptUnknown {	// if we are accepting incoming connections
 
-		ss, ecPkDec, hmac, err := q.conn.CrClient.DecapsulateAndUnpack(
+		ss, ecPkDec, _, err := q.conn.CrClient.DecapsulateAndUnpack(
 			q.conn.Config.PacketSize,
 			m.Data )
 		
@@ -238,27 +247,6 @@ func(q *Queue) tryKeyExchange(m *protocol.Message ) {
 			}
 			// check who is writing to us...
 			if haveSS == false {
-				// check if we know the person already
-				for _, peer := range q.conn.GetPeers() {
-					networkSubkey := []byte{}
-					for k, v := range q.NetworkSubkeys {
-						if k == peer.GetAlias() {
-							networkSubkey = v
-							break
-						}
-					}
-					if peer.Equals( ecPkDec ) {
-						//util.DebugPrintln("Found a peer with same public key:",
-						//	peer.GetAlias())
-						if len(networkSubkey) == 0 || cryptography.VerifyHMACBytes( ecPkDec, networkSubkey, hmac ) == true {
-							peer.SetKey( ss )
-							return
-						} else {
-							util.DebugPrintln("Peer wanted to appear as someone else")
-						}
-					}
-				}
-
 				// someone who connects to us
 				// isn't known to us (or uses ephemerial mode).
 				newPeer := protocol.NewPeer( util.GenID() )
@@ -277,25 +265,6 @@ func(q *Queue) tryKeyExchange(m *protocol.Message ) {
 	}
 }
 
-func(q *Queue) handleRetransmitPacket( data []byte ) {
-	util.DebugPrintln("The message must be resent...")
-	// resend a cleared packet in queue
-	newMsg := &protocol.Message{
-		"",
-		"",
-		data,
-		protocol.UnknownSender,
-		false,	// do not optimize this packet.
-		map[string]string{},
-	}
-
-	if q.closed {
-		return
-	}
-
-	q.queue <- newMsg
-}
-
 func(q *Queue) handlePkRequest( pct *protocol.Packet, data []byte, peer *protocol.Peer ) {
 	
 	// are we allowed to send public keys of our friends?
@@ -312,7 +281,7 @@ func(q *Queue) handlePkRequest( pct *protocol.Packet, data []byte, peer *protoco
 					false,	// don't take it into account during packet optimization
 					map[string]string{},
 				}
-				if q.closed {
+				if q.IsClosed() {
 					return
 				}
 
@@ -337,7 +306,7 @@ func(q *Queue) handlePkRequest( pct *protocol.Packet, data []byte, peer *protoco
 					map[string]string{},
 				}
 
-				if q.closed {
+				if q.IsClosed() {
 					return
 				}
 				q.queue <- msg
@@ -364,9 +333,9 @@ func(q *Queue) handlePkPacket( pct *protocol.Packet, data []byte, peer *protocol
 		if err == nil {
 			util.DebugPrintln("[handlePkPacket] Amount of collected public keys:", len(publicKeys))
 			for _, pk := range publicKeys {
-				//exists := false
-				// check if don't have any public key with similar alias
-				/*for _, p := range q.conn.GetPeers() {
+				exists := false
+				// check if don't have any public key with same alias
+				for _, p := range q.conn.GetPeers() {
 					if p.Alias == pk.Alias {
 						exists = true
 						break
@@ -374,13 +343,13 @@ func(q *Queue) handlePkPacket( pct *protocol.Packet, data []byte, peer *protocol
 				}
 				// append, if needed
 				if exists == false {
-				*/
-				util.DebugPrintln("Adding a new public key for peer ", pk.Alias)
+				
+					util.DebugPrintln("Adding a new public key for peer ", pk.Alias)
 					newPeer := protocol.NewPeer( pk.Alias )
-					if err = newPeer.SetPk( pk.Content, q.conn.Peers.NetworkSubkey() ); err == nil {
+					if err = newPeer.SetPk( pk.Content, q.conn.Peers.NetworkKey() ); err == nil {
 						q.conn.AddPeer( newPeer )
 					}
-				//}
+				}
 			}
 		} else {
 			util.DebugPrintln("[----] UnpackPublicKeys failed:", err)
@@ -401,8 +370,8 @@ func(q *Queue) handleDataPacket( pct *protocol.Packet, data []byte, peer *protoc
 			map[string]string{},
 		}
 
-		if q.closed {
-			util.DebugPrintln("Queue is closed...???")
+		if q.IsClosed() {
+			//util.DebugPrintln("Queue is closed...???")
 			return
 		}
 		q.incoming <- newMsg
@@ -410,6 +379,7 @@ func(q *Queue) handleDataPacket( pct *protocol.Packet, data []byte, peer *protoc
 	}
 
 	// handle a sequence of messages
+	//util.DebugPrintln("Adding a packet into q.msgHandler.")
 	q.msgHandler.AddPacket( peer.Alias, pct.Head.Seq, pct.Head.Total, pct.Head.Compressed, data )
 	data = q.msgHandler.ByAlias( peer.Alias )
 	if data != nil {
@@ -421,7 +391,7 @@ func(q *Queue) handleDataPacket( pct *protocol.Packet, data []byte, peer *protoc
 			false,
 			map[string]string{},
 		}
-		if q.closed {
+		if q.IsClosed() {
 			return
 		}
 		q.incoming <- newMsg
