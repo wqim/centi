@@ -13,6 +13,11 @@ import (
 	"centi/cryptography"
 )
 
+func writeJsonResponse( w http.ResponseWriter, resp []byte ) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write( resp )
+}
+
 func sendKeys(w http.ResponseWriter, r *http.Request, conn *protocol.ConnManagement ) {
 	//util.DebugPrintln( util.CyanColor + "[GET /api/public-keys]" + util.ResetColor )
 	//resp, _ := json.Marshal( *knownPks )
@@ -26,17 +31,27 @@ func sendKeys(w http.ResponseWriter, r *http.Request, conn *protocol.ConnManagem
 		}
 		packedKeys = append( packedKeys, tmp )
 	}
-	resp, _ := json.Marshal( packedKeys )
-	//util.DebugPrintln( "[+] Sending response with public keys:", len( packedKeys ) )
-	w.Write( resp )
+	resp, err := json.Marshal( packedKeys )
+	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
+	} else {
+		//util.DebugPrintln( "[+] Sending response with public keys:", len( packedKeys ) )
+		writeJsonResponse( w, resp )
+	}
 }
 
 func requestKeys(w http.ResponseWriter, r *http.Request, logger *util.Logger,
 		conn *protocol.ConnManagement, q *network.Queue ) {
 
+	if r == nil || r.Body == nil {
+		return
+	}
+
 	// parse the request
 	var errors = []string{}
 	var pkreq PkRequest
+	defer r.Body.Close()
+
 	data, err := ioutil.ReadAll( r.Body )
 	if err != nil {
 		errors = append( errors, err.Error() )
@@ -57,14 +72,18 @@ func requestKeys(w http.ResponseWriter, r *http.Request, logger *util.Logger,
 
 			if found == false {
 				util.DebugPrintln( "Tried to ask peer ", pkreq.Peer )
-				errors = append( errors, "Peer not found, try to connect manually" )
+				errors = append( errors, "Peer " + pkreq.Peer + " not found, try to connect manually." )
 			}
 		}
 	}
-	response, _ := json.Marshal( map[string][]string{
+	response, err := json.Marshal( map[string][]string{
 		"errors": errors,
 	})
-	w.Write( response )
+	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
+	} else {
+		writeJsonResponse( w, response )
+	}
 }
 
 
@@ -76,17 +95,25 @@ func sendPeers( w http.ResponseWriter, r *http.Request, conn *protocol.ConnManag
 			peersNames = append( peersNames, p.Alias )
 		}
 	}
-	packed, _ := json.Marshal( peersNames )
-	w.Write( packed )
+	packed, err := json.Marshal( peersNames )
+	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
+	} else {
+		writeJsonResponse( w, packed )
+	}
 }
 
 func connectToPeer( w http.ResponseWriter, r *http.Request,
 			logger *util.Logger, conn *protocol.ConnManagement,
 			queue *network.Queue ) {
-
+	
+	if r == nil || r.Body == nil {
+		return
+	}
 	// start key exchange with specified peer
 	//util.DebugPrintln( util.CyanColor + "[POST /api/connect]" + util.ResetColor )
 	errors := []string{}
+	defer r.Body.Close()
 	data, err := ioutil.ReadAll( r.Body )
 	if err != nil {
 		errors = append( errors, "Failed to read request body: " + err.Error())
@@ -112,7 +139,7 @@ func connectToPeer( w http.ResponseWriter, r *http.Request,
 				// encapsulating shared secret
 				networkSubkey := []byte{}
 				client := conn.CrClient
-				if conn.Config.EphemeralMode == true {
+				//if conn.Config.EphemeralMode == true {
 					
 					// this fixes deanonymization issue
 					networkSubkey, _ = cryptography.GenRandom( cryptography.SymKeySize )
@@ -121,14 +148,14 @@ func connectToPeer( w http.ResponseWriter, r *http.Request,
 					if err != nil {
 						errors = append( errors, "Failed to generate new keys" )
 					}
-				} else {
-					for k, _ := range queue.NetworkSubkeys {
+				/*} else {
+					for k, _ := range queue.GetNetworkSubkeys() {
 						if k == peer.Alias {
 							networkSubkey = queue.NetworkSubkeys[ peer.Alias ]
 							break
 						}
 					}
-				}
+				}*/
 
 				ss, encapsulated, err := peer.EncapsulateAndPack(
 					client.ECCPrivateKey(),
@@ -160,10 +187,13 @@ func connectToPeer( w http.ResponseWriter, r *http.Request,
 		}
 	}
 	result := Result{ errors, msgID, "", timestamp }
-	data, _ = json.Marshal( result )
-
-	//util.DebugPrintln( "[+] Sending response (2):", string(data) )
-	w.Write( data )
+	data, err = json.Marshal( result )
+	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
+	} else {
+		//util.DebugPrintln( "[+] Sending response (2):", string(data) )
+		writeJsonResponse( w, data )
+	}
 }
 
 
@@ -171,10 +201,15 @@ func handleRequest( w http.ResponseWriter, r *http.Request,
 			logger *util.Logger, conn *protocol.ConnManagement,
 			queue *network.Queue ) {
 
+	if r == nil || r.Body == nil {
+		return
+	}
 	// handle user's request
 	//util.DebugPrintln( util.CyanColor + "[POST /api/request]" + util.ResetColor )
 	var request Request
 	errors := []string{}
+	defer r.Body.Close()
+
 	data, err := ioutil.ReadAll( r.Body )
 	if err != nil {
 		errors = append( errors, "Failed to read request body: " + err.Error() )
@@ -190,7 +225,7 @@ func handleRequest( w http.ResponseWriter, r *http.Request,
 			realData, err := base64.StdEncoding.DecodeString( request.Data )
 			if err != nil {
 				errors = append(errors, "Invalid request: only base64 encoding is supported")
-			} else {
+			} else if len(realData) > 0 {
 				// check to whom we are sending a message
 				//found := false
 				p := conn.Peers.GetPeerByName( request.Dst )
@@ -214,6 +249,8 @@ func handleRequest( w http.ResponseWriter, r *http.Request,
 					// and if we don't have a target peer, return an error
 					errors = append( errors, "Specified peer does not exist." )
 				}
+			} else {
+				errors = append( errors, "No data to send." )
 			}
 		}
 	}
@@ -227,9 +264,10 @@ func handleRequest( w http.ResponseWriter, r *http.Request,
 	data, err = json.Marshal( result )
 	if err != nil {
 		// something really bad had happended just now...
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
 		logger.LogError( fmt.Errorf("Failed to marshal response: " + err.Error()) )
 	} else {
-		w.Write( data )
+		writeJsonResponse( w, data )
 	}
 
 }
@@ -254,13 +292,21 @@ func handleGetResponse( w http.ResponseWriter, r *http.Request,
 			})
 		}
 	}
-	packed, _ := json.Marshal( messages )
-	w.Write( packed )
+	packed, err := json.Marshal( messages )
+	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
+	} else {
+		writeJsonResponse( w, packed )
+	}
 }
 
 func handleResponse( w http.ResponseWriter, r *http.Request,
 			logger *util.Logger, conn *protocol.ConnManagement,
 			queue *network.Queue ) {
+	
+	if r == nil || r.Body == nil {
+		return
+	}
 	// how it should work:
 	// 1. user polls the response url until timeout is reached or the
 	//    answer is received.
@@ -270,6 +316,8 @@ func handleResponse( w http.ResponseWriter, r *http.Request,
 	response := Result{}
 
 	errors := []string{}
+	defer r.Body.Close()
+
 	data, err := ioutil.ReadAll( r.Body )
 	if err != nil {
 		errors = append( errors, "Failed to read request body: " + err.Error() )
@@ -292,11 +340,13 @@ func handleResponse( w http.ResponseWriter, r *http.Request,
 	response.Errors = errors
 	data, err = json.Marshal( response )
 	if err != nil {
+		http.Error( w, "Internal Server Error", http.StatusInternalServerError )
 		logger.LogError( fmt.Errorf("Failed to marshal response: " + err.Error()) )
 	} else {
 		if response.Data != "" {
 			util.DebugPrintln("[+] Really got a message:", string(data))
 		}
-		w.Write( data )
+		//w.Write( data )
+		writeJsonResponse( w, data )
 	}	
 }
