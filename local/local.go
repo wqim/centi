@@ -1,7 +1,7 @@
 package local
 import (
 	"fmt"
-	"time"
+	//"time"
 	"centi/util"
 	"centi/config"
 	"centi/modules"
@@ -17,7 +17,11 @@ import (
 func RunCentiNetwork( configFile string, password, saltBytes []byte ) error {
 
 	// 1. read all the things we need
-	key := cryptography.DeriveKey( password, saltBytes )
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		return err
+	}
+
 	fullConfig, err := config.LoadConfig( configFile, key )
 	if err != nil {
 		return err
@@ -45,14 +49,18 @@ func RunCentiNetwork( configFile string, password, saltBytes []byte ) error {
 			return err
 		}
 	}
-	connections := protocol.NewConnManagement(
+	connections, err := protocol.NewConnManagement(
 		conns,
 		&fullConfig.NetworkConfig,
 		&fullConfig.StegConfig,
 		cryptClient,
 	)
 
-	subkeys := config.ExtractNetworkSubkeys( fullConfig.NetworkConfig.NetworkSubkeys )
+	if err != nil {
+		return fmt.Errorf("NewConnManagement failed: %s", err.Error())
+	}
+
+	//subkeys := config.ExtractNetworkSubkeys( fullConfig.NetworkConfig.NetworkSubkeys )
 
 	// 3. initialize channels
 	connections.DeleteChannels()
@@ -66,36 +74,36 @@ func RunCentiNetwork( configFile string, password, saltBytes []byte ) error {
 		fullConfig.DbRowsLimit,
 		fullConfig.NetworkConfig.QueueSize,
 		logger,
-		&connections,
-		subkeys,
+		connections,
+		//subkeys,
 	)
 	
 	if err != nil {
-		return err
+		return fmt.Errorf("NewQueue failed: %s", err.Error())
 	}
 
-	pk, err := cryptClient.GetPublicKey( connections.Peers.NetworkSubkey() )
+	/*pk, err := cryptClient.GetPublicKey( connections.Peers.NetworkKey() )
 	if err != nil {
 		return err
-	}
+	}*/
 
 	//util.DebugPrintln("Our public key is ", base64.StdEncoding.EncodeToString(pk[:10]))
-	err = connections.DistributePkEverywhere( pk )
+	/*err = connections.DistributePkEverywhere( pk )
 	if err != nil {
 		//util.DebugPrintln( util.RedColor + "[ERROR]:" + util.ResetColor, err )
 		logger.LogError(err)
 	}
 
 	go collectPublicKeys(
-		connections,
+		*connections,
 		logger,
 		fullConfig.NetworkConfig.CollectionDelay,
-	)
+	)*/
 
 	go queue.RunNetworkBackground()
 	go queue.RunNetwork()
 
-	return RunCentiApiServer( &fullConfig.ServerConfig, logger, &connections, queue )
+	return RunCentiApiServer( &fullConfig.ServerConfig, logger, connections, queue )
 }
 
 func buildConnections( conf []config.ConnectionInfo ) []protocol.Connection {
@@ -121,6 +129,7 @@ func buildCryptClients( amount int, keys *config.KeysConfig ) []*cryptography.Cr
 	return clients
 }
 
+/*
 func collectPublicKeys(
 	connections protocol.ConnManagement,
 	logger *util.Logger,
@@ -180,3 +189,4 @@ func collectPublicKeys(
 		time.Sleep( time.Duration(delay) * time.Millisecond )
 	}
 }
+*/
