@@ -45,9 +45,6 @@ func(n NetConn) Name() string {
 
 
 // are not really used because of TCP/UDP protocol nature.
-func(n NetConn) PrepareToDelete(data []byte) (*protocol.Message, error) {
-	return nil, nil
-}
 func(n NetConn) Delete(msg *protocol.Message) error {
 	return nil
 }
@@ -65,9 +62,9 @@ func(n NetConn) DeleteChannels() error {
 func AddrToAlias( addr string ) string {
 	parts := strings.Split( addr, ":" )
 	if len(parts) > 1 {
-		return parts[0]
+		return Name + ":" + parts[0]
 	}
-	return addr
+	return Name + ":" + addr
 }
 
 func closePeer( peer *Peer, useRlock bool ) {
