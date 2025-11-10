@@ -62,6 +62,7 @@ func(m *MsgChannel) Push( msg []byte, index uint64 ) {
 
 	// basically, the checks are the same, but better safe than sorry
 	// (code analysis tool warning here)
+	//util.DebugPrintf("Pushing part of the message at #%d\n", index)
 	if index < m.total && index < uint64(len(m.messages)) {	
 		if m.messages[index] == nil || len(m.messages[index]) == 0 {
 			m.messages[index] = msg
@@ -78,7 +79,6 @@ func(m *MsgChannel) Data() ([]byte, error) {
 		if msg == nil || len(msg) == 0 {
 			return nil, fmt.Errorf("not a full message")
 		}
-
 		result = append( result, msg... )
 	}
 
