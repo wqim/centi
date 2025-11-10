@@ -103,7 +103,7 @@ func(p *Peer) SetPk( pk, networkKey []byte ) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	if len(pk) < cryptography.HashSize + cryptography.PkSize {
+	if len(pk) < cryptography.PkSize {
 		return fmt.Errorf("invalid size of public key")
 	}
 
@@ -121,12 +121,12 @@ func(p *Peer) SetPk( pk, networkKey []byte ) error {
 
 	util.DebugPrintln( "[Peer::SetPk] public key bytes:",
 		//base64.StdEncoding.EncodeToString( pk[:16] ),
-		base64.StdEncoding.EncodeToString( pk[ kyber768.PublicKeySize : len(pk) - cryptography.HashSize ] ),
+		base64.StdEncoding.EncodeToString( pk[ kyber768.PublicKeySize : ] ),
 	)
 	p.pqPk = &kyber768.PublicKey{}
 	p.pqPk.Unpack( pk[:kyber768.PublicKeySize] )
 
-	ecPk, err := x509.ParsePKIXPublicKey( pk[ kyber768.PublicKeySize : len(pk) - cryptography.HashSize ] )
+	ecPk, err := x509.ParsePKIXPublicKey( pk[ kyber768.PublicKeySize : ] )
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,10 @@ func(p *Peer) EncapsulateAndPack(
 			if err != nil {
 				return nil, nil, err
 			}
-			finalSS = cryptography.DeriveSharedSecret( ss, ss2 )
+			finalSS, err = cryptography.DeriveSharedSecret( ss, ss2 )
+			if err != nil {
+				return nil, nil, err
+			}
 			/*util.DebugPrintln("[EncapsulateAndPack] Shared secret:",
 				hex.EncodeToString( finalSS )) */
 		}
@@ -277,6 +280,7 @@ func(p *Peer)pack( data []byte, packetSize uint, packetType uint8, seqNumber uin
 	util.DebugPrintln("Size of data:", len(data) )
 
 	for i := uint(0); i < uint(len(data)); i += step {
+		util.DebugPrintln("[pack] i =", i)
 		// handle out of range slice
 		border := i + step
 		if border > uint(len(data)) {
@@ -337,6 +341,7 @@ func(p *Peer)PackToSend( data []byte, packetSize uint ) ([][]byte, error) {
 	return p.pack(data, packetSize, DataPct, 0 )
 }
 
+/*
 func(p *Peer) PackToResend( data []byte, packetSize uint, amountOfResend uint8, peers []*Peer ) ([][]byte, error) {
 	// pack data for final receiver
 	packets, err := p.PackToSend( data, packetSize )
@@ -362,7 +367,7 @@ func(p *Peer) PackToResend( data []byte, packetSize uint, amountOfResend uint8, 
 	}
 	return packets, nil
 }
-
+*/
 
 func(p *Peer) Unpack( data []byte, packetSize uint ) (*Packet, error) {
 	// returns data, should we resend packet or not, and an error, if any occured
