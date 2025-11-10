@@ -8,7 +8,7 @@ import (
 	"centi/util"
 	"centi/config"
 	"centi/protocol"
-	"centi/cryptography"
+	//"centi/cryptography"
 	"centi/modules/general"
 )
 
@@ -144,6 +144,7 @@ func(g GitHubConn) DeleteChannels() error {
 	return nil
 }
 
+/*
 func(g GitHubConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	// currently we are able to upload public key via following methods:
 	// 1. hosting it in the /user/user repository's README file
@@ -175,8 +176,8 @@ func(gh GitHubConn) CollectPks( p *config.DistributionParameters ) ([]protocol.K
 			if err == nil {
 				if decoded != nil && len(decoded) == cryptography.PkSize {
 					keys = append( keys, protocol.KnownPk{
-						"github",
-						util.GenID(),	// generate a random key alias
+						gh.Name(),
+						gh.Name() + ":" + strings.Split( repoName, "/" )[0],
 						file,
 					})
 				} else {
@@ -189,7 +190,7 @@ func(gh GitHubConn) CollectPks( p *config.DistributionParameters ) ([]protocol.K
 	}
 	util.DebugPrintln("[++++++] Length of received keys:", len(keys))
 	return keys, finalError
-}
+}*/
 
 // send message to the platform.
 func(g GitHubConn) Send( msg *protocol.Message ) error {
@@ -292,11 +293,6 @@ func(g GitHubConn) RecvAll() ([]*protocol.Message, error) {
 		}
 	}
 	return messages, finalError
-}
-
-func(g GitHubConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
-	// TODO:
-	return nil, nil
 }
 
 // delete message (file) from channel (repository)
