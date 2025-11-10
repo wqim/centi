@@ -1,12 +1,12 @@
 package network
 import (
+	"sync"
 	"centi/util"
 	"centi/protocol"
 )
 
 // the queue which rules the whole network
 type Queue struct {
-	// refactor this too
 	queue		chan *protocol.Message		// data in the jsoned packet
 	incoming	chan *protocol.Message		// channel of incoming messages
 	Logger		*util.Logger			// logger
@@ -15,8 +15,28 @@ type Queue struct {
 	packetsBuf	*protocol.MsgBufManager		// handler for packets we are sending
 	msgHandler	*protocol.MsgHandler		// handler for incoming data packets
 	pkHandler	*protocol.MsgHandler		// handler for incoming public keys
-	NetworkSubkeys	map[string][]byte		// subkeys for network
+	//NetworkSubkeys	map[string][]byte		// subkeys for network
+	//subkeysMtx	sync.Mutex
 	closed		bool
+	closedMtx	sync.RWMutex
+}
+
+/*
+func(q *Queue) GetNetworkSubkeys() map[string][]byte {
+	q.subkeysMtx.Lock()
+	defer q.subkeysMtx.Unlock()
+	copyMap := make(map[string][]byte, len(q.NetworkSubkeys))
+	for k, v := range q.NetworkSubkeys {
+		copyMap[k] = v
+	}
+	return copyMap
+}
+*/
+
+func(q *Queue) IsClosed() bool {
+	q.closedMtx.RLock()
+	defer q.closedMtx.RUnlock()
+	return q.closed
 }
 
 // auxilary function for outer things.
@@ -39,6 +59,10 @@ func(q *Queue) PushPacket( receiver *protocol.Peer, packet *protocol.Message ) {
 }
 
 func(q *Queue) Incoming() *protocol.Message {
+
+	q.closedMtx.RLock()
+	defer q.closedMtx.RUnlock()
+
 	if len(q.incoming) == 0 || q.closed {	// handle empty channel case
 		return nil
 	}
@@ -52,7 +76,7 @@ func(q *Queue) Incoming() *protocol.Message {
 func NewQueue(  dbfilepath, dbpassword string, dbRowsLimit,
 		queueSize uint, logger *util.Logger,
 		conn *protocol.ConnManagement,
-		networkSubkeys map[string][]byte ) (*Queue, error) {
+		/*networkSubkeys map[string][]byte*/ ) (*Queue, error) {
 
 	db, err := util.ConnectDB( dbfilepath, dbpassword, dbRowsLimit )
 	if err != nil {
@@ -74,13 +98,17 @@ func NewQueue(  dbfilepath, dbpassword string, dbRowsLimit,
 		protocol.NewMsgBufManager(),
 		protocol.NewMsgHandler(),
 		protocol.NewMsgHandler(),
-		networkSubkeys,
+		//networkSubkeys,
+		//sync.Mutex{},
 		false,
+		sync.RWMutex{},
 	}, nil
 
 }
 
 func(q *Queue) Close() {
+	q.closedMtx.Lock()
+	defer q.closedMtx.Unlock()
 	q.closed = true
 	q.db.Close()
 	close(q.queue)
