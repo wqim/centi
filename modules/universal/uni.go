@@ -78,7 +78,7 @@ func(u *UniConn) send( m *APIMessage ) (*APIResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	util.DebugPrintln("send():", string(data))
+	//util.DebugPrintln("send():", string(data))
 	// make a post http request.
 	resp, err := general.HTTPRequest( u.addr, "POST", data, u.headers )
 	if err != nil {
@@ -121,6 +121,7 @@ func(u UniConn) DeleteChannels() error {
 	return u.shortenedSend( &m )
 }
 
+/*
 func(u UniConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	m := APIMessage{
 		"distribute_pk",
@@ -190,6 +191,7 @@ func(u UniConn) CollectPks( p *config.DistributionParameters ) ([]protocol.Known
 	}
 	return keys, nil
 }
+*/
 
 func(u UniConn) Send( msg *protocol.Message ) error {
 	m := APIMessage{
@@ -267,38 +269,6 @@ func(u UniConn) RecvAll() ([]*protocol.Message, error) {
 	}
 
 	return messages, nil
-}
-
-
-func(u UniConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
-	m := APIMessage{
-		"prepare_to_delete",
-		map[string]any{
-			"data": base64.StdEncoding.EncodeToString(data),
-		},
-	}
-	resp, err := u.send( &m )
-	if err != nil {
-		return nil, err
-	}
-	if strings.ToLower( resp.Status ) == "failure" {
-		return nil, fmt.Errorf("%s", resp.Args["error"])
-	}
-
-	args := map[string]string{}
-	for k, v := range resp.Args {
-		args[k] = fmt.Sprintf("%v", v)
-	}
-
-	msg := protocol.Message{
-		args["msg_name"],
-		u.Name(),
-		data,
-		protocol.UnknownSender,
-		true,
-		args,
-	}
-	return &msg, nil
 }
 
 func(u UniConn) Delete( msg *protocol.Message ) error {
