@@ -176,10 +176,6 @@ func NewSshConn( args map[string]string, channels []config.Channel ) (protocol.C
 }
 
 // unused things
-func(s SshConn) PrepareToDelete( data []byte ) (*protocol.Message, error ) {
-	return nil, nil
-}
-
 func(s SshConn) Delete( msg *protocol.Message ) error {
 	return nil
 }
@@ -209,6 +205,7 @@ func(s SshConn) MessageFromBytes( data []byte ) (*protocol.Message, error) {
 	return msg, nil
 }
 
+/*
 func(s SshConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	// first message is always a public key
 
@@ -253,6 +250,7 @@ func(s SshConn) CollectPks( p *config.DistributionParameters ) ([]protocol.Known
 	}
 	return pks, nil
 }
+*/
 
 func(s SshConn) Send ( msg *protocol.Message ) error {
 
