@@ -73,7 +73,8 @@ func TestPackAndUnpack(t *testing.T) {
 	if err := peer.SetKey(key); err != nil {
 		t.Fatal(err)
 	}
-	data := []byte("This is a test message for packing")
+	data, _ := cryptography.GenRandom( 10000 )
+	//make([]byte, 13200) //[]byte("This is a test message for packing")
 	packetSize := uint(4096)
 
 	packets, err := peer.PackToSend(data, packetSize)
@@ -83,7 +84,9 @@ func TestPackAndUnpack(t *testing.T) {
 	if len(packets) == 0 {
 		t.Fatal("No packets generated")
 	}
+	t.Log( "TestPackAndUnpack: amount of packets:", len(packets) )
 	// Unpack each packet
+	allData := []byte{}
 	for _, packet := range packets {
 		//fmt.Println("Unpacking packet number ", i)
 		packetObj, err := peer.Unpack(packet, packetSize)
@@ -95,11 +98,15 @@ func TestPackAndUnpack(t *testing.T) {
 			t.Errorf("Failed to decode data: %s", err.Error())
 		}
 		decodedData = decodedData[:packetObj.Body.OrigSize]
-		if packetObj == nil || string(decodedData) != string(data) {
+		/*if packetObj == nil || string(decodedData) != string(data) {
 			t.Errorf("Unpacked data mismatch: got '%s', expected '%s'",
-				string(decodedData),
-				string(data),
+				string(decodedData[:10]),
+				string(data[:10]),
 			)
-		}
+		}*/
+		allData = append( allData, decodedData... )
+	}
+	if bytes.Equal( allData, data ) == false {
+		t.Errorf("[TestPackAndUnpack] Unpacked != packed.")
 	}
 }
