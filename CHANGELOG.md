@@ -11,6 +11,7 @@
 
 
 2025-11-10
+- Changed configuration format from JSON to YAML for more readability
 - Changed protocol a bit
 - Fixed a lot of bugs
 - Moved bluetooth from module to microservice
