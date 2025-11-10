@@ -33,7 +33,7 @@ func TestSaveAndLoadConfig( t *testing.T ) {
 
 func TestExtractNetworkSubkeys( t *testing.T ) {
 	subkeys := map[string]string{
-		"test": "test",
+		"platform:test": "guTtiiTKPbg=:test",
 	}
 	nSubkeys := ExtractNetworkSubkeys( subkeys )
 	if len(nSubkeys) != len(subkeys) {
