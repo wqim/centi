@@ -1,12 +1,15 @@
 package protocol
-
 import (
 	"fmt"
 	"testing"
+	"centi/cryptography"
 )
 
 func TestNewMsgBuffer(t *testing.T) {
 	// Create a mock Peer
+
+	randomBytes, _ := cryptography.GenRandom( 10000 )
+
 	mockPeer := NewPeer("")
 	mockPeer.SetKey( make([]byte, 32) )
 
@@ -43,6 +46,14 @@ func TestNewMsgBuffer(t *testing.T) {
 			expectedError: nil,
 			expectedPacketsCount: 1,
 		},
+		{
+			name:		"Very big packet",
+			packetSize:	4096,
+			data:	randomBytes,
+			expectedMsgSize: 4096,
+			expectedError: nil,
+			expectedPacketsCount: 5,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -66,7 +77,6 @@ func TestNewMsgBuffer(t *testing.T) {
 				if mb.msgSize != 0 {
 					t.Errorf("Expected error %v, got valid msgSize", tc.expectedError)
 				}
-
 			}
 		})
 	}
