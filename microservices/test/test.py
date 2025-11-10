@@ -6,7 +6,6 @@ import json
 import http.server
 import socketserver
 from base64 import b64encode, b64decode
-
 PORT = 8001
 
 public_keys = []
@@ -25,23 +24,6 @@ class ApiHandler:
     def _delete_channels(self, channels):
         print("Deleting channels:", channels)
 
-    def _distribute_pk(self, params, pk):
-        print("Distributing public key...")
-        global public_keys
-        public_keys.append( pk )
-
-    def _collect_pks(self, params):
-        print("Collecting public keys...")
-        global public_keys
-        # note: store current public keys for further usage
-        # ( if they weren't updated somehow )
-        pks = [{
-            "platform": "test",
-            "alias": "me",
-            "content": i
-        }for i in public_keys]
-        return pks
-
     def _send(self, msg):
         print("Sending message:", msg["data"])
         global messages
@@ -53,10 +35,6 @@ class ApiHandler:
         msgs = [ m for m in messages ]
         messages = []
         return msgs
-
-    def _prepare_to_delete(self, data):
-        print("Prepare-to-delete function called")
-        return None
 
     def _delete(self, msg):
         print("Deleting message from the channel:", msg)
@@ -73,13 +51,6 @@ class ApiHandler:
 
         elif msg_type == "delete_channels":
             self._delete_channels( msg["args"]["channels"] )
-            
-        elif msg_type == "distribute_pk":
-            self._distribute_pk( msg["args"]["distribution_parameters"], msg["args"]["public_key"] )
-
-        elif msg_type == "collect_pks":
-            pks = self._collect_pks( msg["args"]["distribution_parameters"] )
-            response["args"]["public_keys"] = pks
 
         elif msg_type == "send":
             self._send( msg["args"]["message"] )
@@ -87,10 +58,6 @@ class ApiHandler:
         elif msg_type == "recv_messages":
             msgs = self._recv()
             response["args"]["messages"] = msgs
-
-        elif msg_type == "prepare_to_delete":
-            msg2 = self._prepare_to_delete( msg["args"]["data"] )
-            response["args"]["message"] = msg2
 
         elif msg_type == "delete":
             self._delete( msg["args"]["message"] )
@@ -121,6 +88,9 @@ class ApiHandler:
 
 
 class ReqHandler( http.server.SimpleHTTPRequestHandler ):
+
+    def do_GET(self):
+        self.send_response( 403 )
 
     def do_POST(self):
         content_length = int(self.headers["Content-Length"])
