@@ -72,7 +72,7 @@ class ApiHandler:
         if have_public_key():
             if destination_hash not in self.servers:
                 self.servers.add( destination_hash )
-                # print("new amount of known servers(nodes):", len(self.servers))
+                print("new amount of known servers(nodes):", len(self.servers))
                 self._connect_to_addr( destination_hash )
 
     def _init_channels(self, channels):
@@ -154,6 +154,7 @@ class ApiHandler:
         self.servers = set()
         # should we delete channels we have connected to...?
 
+    """
     def _distribute_pk(self, params, pk):
         print("Distributing public key... (already done by callback functions.)")
         set_public_key( pk )
@@ -169,6 +170,7 @@ class ApiHandler:
         # note: store current public keys for further usage
         # ( if they weren't updated somehow )
         return pks
+    """
 
     def _send_to_peers(self, peers_, msg):
         #print("_send_to_peers():", len(self.peers), len(peers_) )
@@ -181,25 +183,23 @@ class ApiHandler:
 
     def _send(self, msg):
         # print("Sending message:", msg["data"])
-        #print("Senging message...")
+        print("Senging message...")
         peers_ = get_peers()
-        ##print("[*] Amount of peers:", len(peers_))
+        print("[*] Amount of peers:", len(peers_))
         self._send_to_peers( peers_, msg )
 
         self.mtx.acquire()
-        #print("[*] Amount of self.peers:", len(self.peers))
+        print("[*] Amount of self.peers:", len(self.peers))
         self._send_to_peers( self.peers, msg )
         self.mtx.release()
 
     def _recv(self):
-        #print("Receiving messages...")
+        print("Receiving messages...")
         msgs = get_messages()
-        #print(Fore.LIGHTCYAN_EX + "[*] Amount of received messages:" + Fore.RESET, len(msgs))
+        print(Fore.LIGHTCYAN_EX + "[*] Amount of received messages:" + Fore.RESET, len(msgs))
         return msgs
 
-    # for reticulum it's just a couple of dummies here...
-    def _prepare_to_delete(self, data):
-        return None
+    # for reticulum it's just a dummy here...
     def _delete(self, msg):
         pass # print("Deleting message from the channel:", msg)
 
@@ -208,7 +208,7 @@ class ApiHandler:
     def gen_response( self, msg ):
         msg_type = msg["message_type"]
         response = {"message_type": msg_type, "status": "success", "args": {}}
-        # print(msg_type)
+        print(msg_type)
         if msg_type == "init_microservice":
             self._init_microservice( msg["args"] )
 
@@ -217,13 +217,14 @@ class ApiHandler:
 
         elif msg_type == "delete_channels":
             self._delete_channels( msg["args"]["channels"] )
-            
+            """
         elif msg_type == "distribute_pk":
             self._distribute_pk( msg["args"]["distribution_parameters"], msg["args"]["public_key"] )
 
         elif msg_type == "collect_pks":
             pks = self._collect_pks( msg["args"]["distribution_parameters"] )
             response["args"]["public_keys"] = pks
+            """
 
         elif msg_type == "send":
             self._send( msg["args"]["message"] )
@@ -231,10 +232,6 @@ class ApiHandler:
         elif msg_type == "recv_messages":
             msgs = self._recv()
             response["args"]["messages"] = msgs
-
-        elif msg_type == "prepare_to_delete":
-            msg2 = self._prepare_to_delete( msg["args"]["data"] )
-            response["args"]["message"] = msg2
 
         elif msg_type == "delete":
             self._delete( msg["args"]["message"] )
