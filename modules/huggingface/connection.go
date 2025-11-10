@@ -3,12 +3,12 @@ import (
 	"fmt"
 	"strings"
 	"encoding/json"
-	"encoding/base64"
+	//"encoding/base64"
 
 	"centi/util"
 	"centi/config"
 	"centi/protocol"
-	"centi/cryptography"
+	//"centi/cryptography"
 	"centi/modules/general"
 )
 
@@ -138,6 +138,7 @@ func(hf HuggingfaceConn) DeleteChannels() error {
 	return nil
 }
 
+/*
 func(hf HuggingfaceConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	// possible ways of public key distribution in huggingface:
 	// 1. (as in github) public key in the README file of specified repository
@@ -177,8 +178,8 @@ func(hf HuggingfaceConn) CollectPks( p *config.DistributionParameters ) ([]proto
 		if err == nil {
 			if len(decoded) == cryptography.PkSize {
 				keys = append( keys, protocol.KnownPk{
-					"huggingface",
-					util.GenID(),	// generate an alias at random
+					hf.Name(),
+					hf.Name() + ":" + strings.Split( repoName, "/" )[0],	// generate an alias at random
 					decoded,
 				})
 			} else {
@@ -190,7 +191,7 @@ func(hf HuggingfaceConn) CollectPks( p *config.DistributionParameters ) ([]proto
 		}
 	}
 	return keys, finalError
-}
+}*/
 
 func(hf HuggingfaceConn) Send( msg *protocol.Message ) error {
 	repo, err := hf.findRepoByName( msg.Args[RepoKey] )
@@ -275,11 +276,6 @@ func(hf HuggingfaceConn) RecvAll() ( []*protocol.Message, error ) {
 		}
 	}
 	return messages, finalError
-}
-
-func(hf HuggingfaceConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
-	// TODO
-	return nil, nil
 }
 
 func(hf HuggingfaceConn) Delete( msg *protocol.Message ) error {
