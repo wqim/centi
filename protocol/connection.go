@@ -17,11 +17,10 @@ type Connection interface{
 	Name() string
 	InitChannels() error
 	DeleteChannels() error
-	DistributePk( p *config.DistributionParameters, pk []byte ) error
-	CollectPks( p *config.DistributionParameters ) ([]KnownPk, error)
+	//DistributePk( p *config.DistributionParameters, pk []byte ) error
+	//CollectPks( p *config.DistributionParameters ) ([]KnownPk, error)
 	Send( msg *Message ) error
 	RecvAll() ([]*Message, error)
-	PrepareToDelete( data []byte ) (*Message, error )
 	Delete( msg *Message ) error
 	MessageFromBytes( data []byte ) (*Message, error)
 
@@ -35,29 +34,39 @@ type ConnManagement struct {
 	StegConfig	*config.SteganoConfig
 	Peers		*PeerManager
 	CrClient	*cryptography.CryptClient	// our cryptographical parameters
-	storage		*util.Storage
+	storage		*util.Storage			// storage for steganography data (which files used to send packets,
+							// useful for social-media-based modules/microservices)
 }
 
 func NewConnManagement(
 	connections []Connection,
 	conf *config.NetworkConfig,
 	sconf *config.SteganoConfig,
-	crclient *cryptography.CryptClient ) ConnManagement {
+	crclient *cryptography.CryptClient ) ( *ConnManagement, error ) {
 
 	pass, saltBytes, err := cryptography.SplitWithSalt( conf.NetworkKey )
 	if err != nil {
-		return ConnManagement{}
+		return nil, err
 	}
 
-	networkKey := cryptography.DeriveKey( pass, saltBytes )
-	return ConnManagement{
+	networkKey, err := cryptography.DeriveKey( pass, saltBytes )
+	if err != nil {
+		return nil, err
+	}
+
+	peerMngr := NewPeerManager( networkKey )
+	if err = peerMngr.PeersFromKeys( conf.Peers ); err != nil {
+		return nil, err
+	}
+
+	return &ConnManagement{
 		connections,
 		conf,
 		sconf,
-		NewPeerManager( networkKey ),
+		peerMngr,
 		crclient,
 		util.NewStorage(),
-	}
+	}, nil
 }
 
 func( cm *ConnManagement ) GetPeers() []*Peer {
@@ -69,6 +78,7 @@ func( cm *ConnManagement ) AddPeer( peer *Peer ) {
 }
 
 // pk - packed public key of our own
+/*
 func( cm *ConnManagement ) DistributePkEverywhere( pk []byte ) error {
 	var err error
 	for _, c := range cm.Connections {
@@ -78,7 +88,8 @@ func( cm *ConnManagement ) DistributePkEverywhere( pk []byte ) error {
 	}
 	return err
 }
-
+*/
+/*
 func( cm *ConnManagement ) CollectPks() ([]KnownPk, error) {
 	var finalError error
 	allKeys := []KnownPk{}
@@ -89,9 +100,10 @@ func( cm *ConnManagement ) CollectPks() ([]KnownPk, error) {
 		} else {
 			finalError = err
 		}
-}
+	}
 	return allKeys, finalError
 }
+*/
 
 func ( cm *ConnManagement ) InitChannels() error {
 	var finalError error
@@ -119,13 +131,10 @@ func( cm *ConnManagement ) RecvAll() ([]*Message, error) {
 	allMsgs := []*Message{}
 	for _, c := range cm.Connections {
 		msgs, tmpErr := c.RecvAll()
-		if msgs != nil && len(msgs) > 0 { //tmpErr == nil {
-			// steganography decoding must be here...?
+		if len(msgs) > 0 { //tmpErr == nil {
+			// steganography decoding
 			exts := c.GetSupportedExtensions()
-			if exts == nil || len(exts) == 0 {
-				// steganography unsupported - collected encrypted messages
-				allMsgs = append( allMsgs, msgs... )
-			} else {
+			if len(exts) > 0 {
 				for _, m := range msgs {
 					recovered, err := RevealFromFile( m.Name, m.Data )
 					if err == nil {
@@ -143,7 +152,11 @@ func( cm *ConnManagement ) RecvAll() ([]*Message, error) {
 						allMsgs = append( allMsgs, m )
 					}
 				}
+			} else {
+				// steganography unsupported - collected encrypted messages
+				allMsgs = append( allMsgs, msgs... )
 			}
+
 		} else if tmpErr != nil {
 			err = tmpErr
 		}
@@ -161,8 +174,8 @@ func( cm *ConnManagement ) SendToAll( data []byte ) error {
 		} else {
 			// steganography encoding must be here...?
 			exts := c.GetSupportedExtensions()
-			if exts != nil && len(exts) > 0 {
-				util.DebugPrintln("[+] Module", c.Name(), "supports steganography.")
+			if len(exts) > 0 {
+				//util.DebugPrintln("[+] Module", c.Name(), "supports steganography.")
 				// steganographic things are supported by module/microservice
 				// hide data inside the file.
 				fname, dt, err := HideInFile( cm.StegConfig.Folder, exts, msg.Data )
@@ -176,7 +189,7 @@ func( cm *ConnManagement ) SendToAll( data []byte ) error {
 				msg.Name = fname
 				msg.Data = dt
 			} else {
-				util.DebugPrintln("[-] Module", c.Name(), "does not support steganography.")
+				//util.DebugPrintln("[-] Module", c.Name(), "does not support steganography.")
 			}
 			if tmperr = c.Send( msg ); tmperr != nil {
 				err = tmperr
@@ -193,23 +206,17 @@ func( cm *ConnManagement ) Delete( msg *Message ) error {
 	msg2 := msg
 	var tmperr error
 	for _, c := range cm.Connections {
-		/*msg2, tmperr := c.PrepareToDelete( msg.Data )
-		if tmperr != nil {
-			err = tmperr
-		} else {
-			//if tmperr = c.Delete( msg2 ); tmperr != nil {
-			//	err = tmperr
-			//}
-		*/	for _, fname := range fnames {
-				parts := strings.Split(fname, ":")
-				if len(parts) == 2 {
-					msg2.Name = parts[1]
-					if tmperr = c.Delete( msg2 ); tmperr != nil {
-						err = tmperr
-					}
+
+		for _, fname := range fnames {
+			parts := strings.Split(fname, ":")
+			if len(parts) == 2 {
+				msg2.Name = parts[1]
+				//util.DebugPrintln("Removing message", fname)
+				if tmperr = c.Delete( msg2 ); tmperr != nil {
+					err = tmperr
 				}
 			}
-		//}
+		}
 	}
 	cm.storage.Remove( msg.Data )
 	return err
