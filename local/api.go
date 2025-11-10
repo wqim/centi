@@ -10,8 +10,6 @@ import (
 	"centi/protocol"
 )
 
-
-
 func RunCentiApiServer( sc *config.ServerConfiguration,
 			logger *util.Logger,
 			conn *protocol.ConnManagement,
@@ -19,8 +17,11 @@ func RunCentiApiServer( sc *config.ServerConfiguration,
 
 	// general user-related functions
 	for uri, page := range sc.Pages {
+		// capture variable inside the loop so all handlers won't end up referencing
+		// the last page value.
+		p := page
 		http.HandleFunc( uri, func(w http.ResponseWriter, r *http.Request) {
-			sendFile( page, sc.NotFoundPage, w )
+			sendFile( p, sc.NotFoundPage, w )
 		})
 	}
 
@@ -30,6 +31,7 @@ func RunCentiApiServer( sc *config.ServerConfiguration,
 		sendKeys( w, r, conn )
 	})
 
+	// request known public keys from peer
 	http.HandleFunc("POST /api/request-public-keys", func(w http.ResponseWriter, r *http.Request) {
 		requestKeys( w, r, logger, conn, queue )
 	})
@@ -66,18 +68,19 @@ func RunCentiApiServer( sc *config.ServerConfiguration,
 func sendFile( filename, notFoundPage string, w http.ResponseWriter ) {
 	htmlPage, err := os.ReadFile( filename )
 	if err != nil {
+		w.WriteHeader( 404 )
 		htmlPage, err = os.ReadFile( notFoundPage )
 		if err != nil {
-			w.WriteHeader( 404 )
 			w.Write( []byte("Not found") )
 		} else {
-			w.WriteHeader( 404 )
 			w.Write( htmlPage )
 			return
 		}
 	}
 	if strings.HasSuffix( filename, ".css" ) {
 		w.Header().Set("Content-Type", "text/css")
+	} else if strings.HasSuffix( filename, ".html") {
+		w.Header().Set("Content-Type", "text/html")
 	}
 	w.Write( htmlPage )
 }
