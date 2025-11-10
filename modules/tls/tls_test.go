@@ -11,7 +11,7 @@ import (
 	"centi/protocol"
 )
 
-func TestTLS(t *testing.T) {
+func TestTCPUDP(t *testing.T) {
 
 	/*if err := createCertificate("cert1.pem", "key1.pem"); err != nil {
 		t.Error("Failed to create certificate and key:", err)
