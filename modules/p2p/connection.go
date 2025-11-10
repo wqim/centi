@@ -146,7 +146,6 @@ func NewP2PConn( args map[string]string, channels []config.Channel ) (protocol.C
 }
 
 // dummies for functions which are not needed for p2p functionality
-func(p P2PConn) PrepareToDelete( data []byte ) (*protocol.Message, error) { return nil, nil }
 func(p P2PConn) Delete( msg *protocol.Message ) error { return nil }
 func(p P2PConn) DeleteChannels() error { return nil }
 
@@ -215,21 +214,6 @@ func(p P2PConn) InitChannels() error {
 		}
 	}
 	return finalError
-}
-
-func(p P2PConn) DistributePk( dp *config.DistributionParameters, pk []byte ) error {
-	// the distribution of public key is fairy simple:
-	// we just send it's content (along with hmac, of course)
-	// as first message.
-	pubKey = pk
-	return nil
-}
-
-func(p P2PConn) CollectPks( dp *config.DistributionParameters ) ([]protocol.KnownPk, error) {
-	// the way we collect public keys is the same...
-	pkMtx.Lock()
-	defer pkMtx.Unlock()
-	return publicKeys, nil
 }
 
 func(p P2PConn) Send( msg *protocol.Message ) error {
