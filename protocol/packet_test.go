@@ -8,6 +8,7 @@ import (
 )
 
 func TestPackAndUnpackData(t *testing.T) {
+	t.Log("TestPackAndUnpackData")
 	data := []byte("test data")
 	skey, _ := cryptography.GenRandom( cryptography.SymKeySize )
 	
@@ -29,6 +30,7 @@ func TestPackAndUnpackData(t *testing.T) {
 }
 
 func TestUnpackDataToPacket_InvalidJSON(t *testing.T) {
+	t.Log("TestUnpackDataToPacket_InvalidJSON")
 	invalidJSON := []byte("invalid json")
 	skey, _ := cryptography.GenRandom( cryptography.SymKeySize )
 	
@@ -39,6 +41,7 @@ func TestUnpackDataToPacket_InvalidJSON(t *testing.T) {
 }
 
 func TestUnpackDataToPacket_InvalidSequence(t *testing.T) {
+	t.Log("TestUnpackDataToPacket_InvalidSequence")
 	// Create a valid packet but with Total < Seq
 	packet := Packet{
 		Head: PacketHead{
@@ -59,6 +62,7 @@ func TestUnpackDataToPacket_InvalidSequence(t *testing.T) {
 
 func TestUnpackDataToPacket_InvalidDataSize(t *testing.T) {
 	// Create packet with data smaller than OrigSize
+	t.Log("TestUnpackDataToPacket_InvalidDataSize")
 	dataBytes := []byte("abc")
 	encodedData := string(dataBytes)
 
@@ -82,6 +86,7 @@ func TestUnpackDataToPacket_InvalidDataSize(t *testing.T) {
 
 func TestUnpackDataToPacket_HMACVerificationFails(t *testing.T) {
 
+	t.Log("TestUnpackDataToPacket_HMACVerificationFails")
 	data := []byte("test data")
 	skey, _ := cryptography.GenRandom( cryptography.SymKeySize )
 	packed, _ := PackData(1, 0, 1, 1, data, skey)
