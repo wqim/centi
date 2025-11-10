@@ -18,6 +18,7 @@ require (
 	golang.org/x/image v0.30.0
 	golang.org/x/term v0.34.0
 	golang.org/x/text v0.28.0
+	gopkg.in/yaml.v3 v3.0.1
 	lukechampine.com/jsteg v1.1.0
 	tinygo.org/x/bluetooth v0.12.0
 )
@@ -139,6 +140,5 @@ require (
 	golang.org/x/tools v0.36.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
