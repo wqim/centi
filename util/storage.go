@@ -23,7 +23,7 @@ func(s *Storage) Add( name string, content []byte ) {
 	defer s.mtx.Unlock()
 	hash := cryptography.Hash( content )
 	if hash != "" {
-		if s.storage[hash] == nil || len(s.storage[hash]) == 0 {
+		if len(s.storage[hash]) == 0 {
 			s.storage[hash] = []string{name}
 		} else {
 			s.storage[hash] = append( s.storage[hash], name )
