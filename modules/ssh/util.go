@@ -11,9 +11,9 @@ import (
 func AddrToAlias( addr string ) string {
 	parts := strings.Split( addr, ":" )
 	if len(parts) > 1 {
-		return parts[0]
+		return "ssh:" + parts[0]
 	}
-	return addr
+	return "ssh:" + addr
 }
 
 /*
@@ -79,7 +79,7 @@ func handleConnection(
 		connectedMtx.Unlock()
 	}()
 
-	sentPk := false
+	//sentPk := false
 
 	// hande connected peer.
 	for newChannel := range chans {
@@ -101,14 +101,14 @@ func handleConnection(
 		var lastMsg *protocol.Message
 		for req := range requests {
 			// check if we should send a public key
-			if sentPk == false {
+			/*if sentPk == false {
 				publicKeyMtx.RLock()
 				if publicKey != nil {
 					sentPk = true
 					channel.SendRequest( PkRequestType, false, publicKey )
 				}
 				publicKeyMtx.RUnlock()
-			}
+			}*/
 
 			// pick the message to send (if any)
 			currentMtx.Lock()
@@ -143,7 +143,7 @@ func handleConnection(
 					map[string]string{},
 				}
 				received <- msg
-			} else if req.Type == PkRequestType {
+			} /*else if req.Type == PkRequestType {
 				pk := &protocol.KnownPk{
 					Name,
 					AddrToAlias( conn.RemoteAddr().String() ),
@@ -151,7 +151,7 @@ func handleConnection(
 				}
 				publicKeys <- pk
 				util.DebugPrintln("[ssh::handleConnction] Got public key:", len(req.Payload))
-			}
+			}*/
 		}
 
 		util.DebugPrintln("Closing a channel.")
@@ -180,7 +180,7 @@ func handleConnection(
 				 map[string]string{},
 			 }
 			 received <- msg
-		 } else if req.Type == PkRequestType {
+		 } /*else if req.Type == PkRequestType {
 			 pk := &protocol.KnownPk{
 				 Name,
 				 AddrToAlias( conn.RemoteAddr().String() ),
@@ -188,7 +188,7 @@ func handleConnection(
 			 }
 			 publicKeys <- pk
 			 util.DebugPrintln("[ssh::handleIncomingMessages] Got public key:", len(req.Payload))
-		 }
+		 }*/
 	}
 	util.DebugPrintln("Exitting handleIncomingMessages...")
- }
+}
