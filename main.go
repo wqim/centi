@@ -2,13 +2,11 @@ package main
 import (
 	"os"
 	"fmt"
-	//"flag"
 	"path/filepath"
 
 	"centi/util"
-	"centi/config"
 	"centi/local"
-	//"centi/protocol"
+	"centi/config"
 	"centi/cryptography"
 )
 
@@ -60,7 +58,11 @@ func main() {
 	}
 	
 	// check if we have configuration
-	key := cryptography.DeriveKey( password, saltBytes )
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		fatal("Failed to derive encryption key:", err)
+	}
+
 	configFile := filepath.Join( centiFolder, ConfigFilename )
 	// if the application is installed for the first time, create all the
 	// things we need.
@@ -83,6 +85,10 @@ func main() {
 		// run the network
 		if err = local.RunCentiNetwork( configFile, password, saltBytes ); err != nil {
 			fatal( "Failed to run network:", err )
+		}
+	case "pubkey":
+		if err = PrintPublicKey( configFile, password, saltBytes ); err != nil {
+			fatal( "Failed to print public key:", err )
 		}
 	case "editconf":
 		// edit configuration in secure manner
@@ -107,7 +113,11 @@ func main() {
 func ChangeKeys( configFile string, password, saltBytes []byte ) error {
 
 	// read configuration
-	key := cryptography.DeriveKey( password, saltBytes )
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		return err
+	}
+
 	conf, err := config.LoadConfig( configFile, key )
 	if err != nil {
 		return err
@@ -125,11 +135,43 @@ func ChangeKeys( configFile string, password, saltBytes []byte ) error {
 	keys := config.KeysConfig{
 		Pk: cr.PkToString(),
 		Sk: sk,
-		Peers: conf.Keys.Peers,
 	}
 	conf.Keys = keys
 	return config.SaveConfig( configFile, key, conf )
 }
+
+func PrintPublicKey( conf_ string, password, saltBytes []byte ) error {
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		return fmt.Errorf("Failed to derive key from password: %s", err.Error())
+	}
+
+	conf, err := config.LoadConfig( conf_, key )
+	if err != nil {
+		return err
+	}
+
+	crClient, err := cryptography.ClientFromKeys( conf.Keys.Pk, conf.Keys.Sk )
+	if err != nil {
+		return err
+	}
+
+	networkKey := []byte{}
+	pass, salt, err := cryptography.SplitWithSalt( conf.NetworkConfig.NetworkKey )
+	if err == nil {
+		networkKey, err = cryptography.DeriveKey( pass, salt )
+		if err != nil {
+			return err
+		}
+	}
+	pubkey, err := crClient.GetPublicKey( networkKey )
+	if err != nil {
+		return err
+	}
+	println( cryptography.EncodePublicKey( pubkey ) )
+	return nil
+}
+
 func getSalt( centiFolder string ) ([]byte, error) {
 	saltFile := filepath.Join( centiFolder, SaltFilename )	
 	salt, err := os.ReadFile( saltFile )
@@ -165,15 +207,10 @@ func defaultConfig( centiFolder string ) *config.FullConfig {
 			MinDelay: 10000,
 			MaxDelay: 20000,
 			CollectionDelay: 5000,
-			//Timeout: 80000,
-			QueueSize: 10,
-			PacketSize: 2048,
+			QueueSize: 100,
+			PacketSize: 4096,
 			AcceptUnknown: true,
 			SendKnownPeers: true,
-			DistrParams: config.DistributionParameters{
-				Type: 0,
-				Args: map[string]string{},
-			},
 		},
 		ServerConfig: config.ServerConfiguration{
 			Address: "127.0.0.1:8080",
@@ -193,6 +230,31 @@ func defaultConfig( centiFolder string ) *config.FullConfig {
 			Mode: util.Error,
 		},
 		PlatformsData: []config.ConnectionInfo{
+			// by default enable bluetooth and reticulum microservices
+			// so people could chat to nearby ones.
+			config.ConnectionInfo{
+				"universal",
+				map[string]string{
+					"name": "reticulum",
+					"addr": "http://127.0.0.1:9000",
+					"config_path": reticulumFolder(),
+					"max_attempts": "10000",
+					"run_as_server": "true",
+					"autodiscovery": "true",
+				},
+				[]config.Channel{},
+			},
+
+			config.ConnectionInfo{
+				"universal",
+				map[string]string{
+					"name": "bluetooth",
+					"addr": "http://127.0.0.1:3333",
+					"run_as_server": "true",
+					"autodiscovery": "true",
+				},
+				[]config.Channel{},
+			},
 		},
 		DbFile: dbfilename,
 		DbPassword: util.GenID(),
@@ -200,7 +262,6 @@ func defaultConfig( centiFolder string ) *config.FullConfig {
 		Keys: config.KeysConfig{
 			Pk: cr.PkToString(),
 			Sk: sk,
-			Peers: map[string][]string{},
 		},
 	}
 	return &conf
@@ -211,12 +272,21 @@ func fatal( args ...any ) {
 	os.Exit(-1)
 }
 
+func reticulumFolder() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fatal("Failed to get home directory:", err)
+	}
+	return filepath.Join( home, ".reticulum" )
+}
+
 func help() {
 	// todo: add a pretty help menu
 	line := `Usage: ./centi <command> [arguments]
 
 The following commands are supported:
 	run		run the network
+	pubkey		print public key
 	editconf	edit configuration
 	readlog		read log file
 	gensalt		generate base64-encoded salt for password
