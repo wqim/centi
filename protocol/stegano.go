@@ -1,7 +1,8 @@
-package modules
+package protocol
 import (
 	"os"
-	//"fmt"
+	"fmt"
+	"strings"
 	"centi/util"
 	//"centi/config"
 	"centi/stegano/img"
@@ -45,6 +46,7 @@ func DetermineFileType( ext string ) int8 {
 		ArchiveFile: supportedArchives,
 	}
 
+	//util.DebugPrintln("DetermineFileType: ext =", ext)
 	for t, v := range types {
 		for _, val := range v {
 			if val == ext {
@@ -87,11 +89,17 @@ func HideInFile(
 		return "", nil, err
 	}
 
-	typ := DetermineFileType( file )
+	parts := strings.Split( file, "." )
+	if len(parts) < 2 {
+		return "", nil, fmt.Errorf("Unknown file format.")
+	}
+
+	typ := DetermineFileType( parts[len(parts) - 1] )
 	switch typ {
 	case TextFile:
 		data, err = text.Hide( fileBytes, data )
 	case ImageFile:
+		//util.DebugPrintln("This is an image file:", file)
 		data, err = img.Hide( fileBytes, data )
 	case AudioFile:
 		data, err = audio.Hide( "test", fileBytes, data )
@@ -110,12 +118,19 @@ func HideInFile(
 		res, err := zip.Bytes()
 		return file, res, err
 	case UnknownFile:
+		util.DebugPrintln("[-] Failed to determine file type of", file)
 	}
 	return file, data, err
 }
 
 func RevealFromFile( filename string, data []byte ) ([]byte, error) {
-	typ := DetermineFileType( filename )
+	
+	parts := strings.Split( filename, "." )
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("Unknown file format.")
+	}
+
+	typ := DetermineFileType( parts[ len(parts)-1 ] )
 	switch typ {
 	case TextFile:
 		return text.Reveal( data )
@@ -134,6 +149,7 @@ func RevealFromFile( filename string, data []byte ) ([]byte, error) {
 		}
 		return zip.Extract()
 	case UnknownFile:
+		util.DebugPrintln("[-] Failed to determine file type (2)")
 		return data, nil
 	}
 	return nil, nil
