@@ -3,7 +3,7 @@ import (
 	"fmt"
 	//"strconv"
 	"encoding/json"
-	"centi/util"
+	//"centi/util"
 	"centi/cryptography"
 )
 
@@ -28,9 +28,6 @@ type PacketBody struct {
 
 
 func PackData( typ, isCompressed uint8, seq, total uint64, data, skey []byte ) ([]byte, error) {
-	// generate temporary encryption key
-	// skey, err := cryptography.GenRandom( cryptography.SymKeySize )
-	//randint := uint64( util.RandInt( 0xffffffff ) )
 
 	hmac := cryptography.HMAC( data, skey ) //cryptography.Hash( append( data, skey... ) )
 	strData := cryptography.EncodeData( data )
@@ -65,8 +62,15 @@ func UnpackData( data, skey []byte ) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// skip the error as it's already handler earlier anyway
-	binData, _ := cryptography.DecodeData( packet.Body.Data )
+	// skip the error as it's already handled earlier anyway?
+	binData, err := cryptography.DecodeData( packet.Body.Data )
+	if err != nil {
+		return nil, err
+	}
+	if uint(len(binData)) < packet.Body.OrigSize {
+		return nil, fmt.Errorf("[UnpackData]: len(binData) < packet.Body.OrigSize")
+	}
+
 	binData = binData[:packet.Body.OrigSize]
 	return binData, nil
 }
@@ -88,7 +92,7 @@ func UnpackDataToPacket( data, skey []byte ) (*Packet, error) {
 	}
 
 	//util.DebugPrintln("[UnpackDataToPacket] Original size of data [packed]:",packet.Body.OrigSize)
-	util.DebugPrintln("[UnpackDataToPacket] Data:", string( binData ) )
+	//util.DebugPrintln("[UnpackDataToPacket] Data:", string( binData ) )
 
 	binData = binData[:packet.Body.OrigSize]
 	//hmac := cryptography.//cryptography.Hash( append( binData, skey...) )
