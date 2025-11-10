@@ -13,6 +13,10 @@ peers_mtx = Lock()
 # default sender of all the messages we receiving
 UnknownSender = ""
 
+def have_public_key():
+    return True
+
+"""
 publicKey = None
 publicKeyMtx = Lock()
 
@@ -44,11 +48,10 @@ def get_public_keys():
 def send_public_key( link ):
     global publicKeyMtx
     global publicKey
-
     publicKeyMtx.acquire()
     RNS.Packet( link, publicKey ).send()
     publicKeyMtx.release()
-
+"""
 
 def set_callbacks( link, packet_callback ):
     link.set_packet_callback( packet_callback )
@@ -79,6 +82,7 @@ def remove_peer( link ):
             break
     peers_mtx.release()
 
+"""
 def add_public_key( pk_raw ):
     global public_keys
     global pk_mtx
@@ -95,12 +99,12 @@ def add_public_key( pk_raw ):
 
     if alreadyHave == False:
         public_keys.append({ # generate random identifier for a public key.
-                "alias": b64encode( os.urandom(16) ).decode(),
+                "alias": "reticulum:" + b64encode( os.urandom(16) ).decode(),
                 "platform": "reticulum",
                 "content": content
         })
     pk_mtx.release()
-
+"""
 
 def add_message( bytes_ ):
     global messages
