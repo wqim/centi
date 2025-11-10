@@ -1,5 +1,5 @@
 \documentclass{article}
-\title{Centi network | Modules}
+\title{Centi network | Modules and Microservices}
 \author{Centi Project}
 
 \usepackage{listings}
@@ -21,93 +21,286 @@
 
 \begin{document}
 \maketitle
-\newpage
 \tableofcontents
-\newpage
 
 \section{Introduction}
-	This is a really short guide for ones who want to create their own Centi modules.
-	Almost no words, only code but very detailed. I tried to explain module anatomy as
-	good as I can. If you feel it's not enought to understand how to create a module,
-	contact with me or other developers of Centi.
+	This is a short guide for ones who want to create their own microservices for Centi network.
+	This guide contains information about basic microservice structure and API format. It also contains
+	information about creating not only microservices but also modules for the network.
 
-\section{Writing a custom Centi module}
-	\subsection{Connection interface}
-	For handling multiple possible channels, Centi uses the following interface:
-	\begin{lstlisting}
-/* some imports from above
-import (
-	"centi/config"
-)
-*/
-type Connection interface{
+	\subsection{Difference between modules and microservices}
+	Modules are built inside the code of the network and can utilize public functions from packages.
+	If you want to make your module accessible, you have to recompile the program. Modules can be written
+	only in Go and C/C++ (since there exists such thing as CGO).
 
-	Name() string
-	InitChannels() error
-	DeleteChannels() error
-	DistributePk( p *config.DistributionParameters, pk []byte ) error
-	CollectPks( p *config.DistributionParameters ) ([]KnownPk, error)
+	Microservices are separate http-server-like programs which have to be executed independently in
+	order to make things work. Microservice can be written in any language the only thing you need to
+	consider is API format. Adding a microservice doesn't require recompilation and therefore is a
+	preferable way to extend the network. Access to microservice inside the program code is done
+	using an `universal` module.
 
-	Send( msg *Message ) error
-	RecvAll() ([]*Message, error)
-
-	PrepareToDelete( data []byte ) (*Message, error )
-	Delete( msg *Message ) error
-
-	MessageFromBytes( data []byte ) (*Message, error)
-}
-	\end{lstlisting}
-	
-	Where KnownPk structure looks like this:
-	\begin{lstlisting}
-type KnownPk struct {
-	Platform	string	// name of platform the key was taken from
-	Alias		string	// alias of key (usually, a username of key owner)
-	Content		[]byte	// the public key content itself.
-}
-	\end{lstlisting}
-
-	And message structure looks like this:
+	\subsection{Message structure}
+	The message structure used in the code looks like this:
 	\begin{lstlisting}
 type Message struct {
+	// name of message (e.g. filepath on github
+	// repository for GitHub module).
+	// used only if steganographic
+	// method is applied to module.
+	// contains a name of file it have covered data in.
+	Name		string	`json:"name"`
+	// name of your module/microservice
+	Platform	string	`json:"platform"`
+	// actual data to send.
+	Data		[]byte	`json:"data"`
+	// alias of the sender (peer alias) or empty string.
+	Sender		string	`json:"sender"`
+	// if we aren a sender of the message, contains true
+	SentByUs	bool	`json:"sent_by_us"`
+	// other things you may need are carried here.
+	Args		map[string]string `json:"args"`
+}
+	\end{lstlisting}
+	It is used in order to provide more or less accurate data transmission independently on
+	way of communication.
 
-	Platform	string		// name of platform message was collected from
-	Data		[]byte		// content of the message
+\section{Writing a module}
+	Module is a package which contains the structure implementing the following interface:
+	\begin{lstlisting}
+type Connection interface{
+	// name of your module, e.g. "my-module"
+	Name() string
+	// function for initializing channels
+	InitChannels() error
+	// function for closing channels
+	DeleteChannels() error
+	// function which sends a message
+	Send( msg *Message ) error
+	// function which receives messages
+	RecvAll() ([]*Message, error)
+	// function for deleting specified message
+	Delete( msg *Message ) error
+	// function for building message object
+	// from bytes slice
+	MessageFromBytes(data []byte)(*Message,error)
+	
+	// function for flexible steganography support.
+	// returns a list of files extensions
+	// (without '.' prefix) which can be distributed
+	// on the platform.
+	// if this list is empty, no steganography method is
+	// applied to data.
+	GetSupportedExtensions() []string
+}
+	\end{lstlisting}
+	So, in order to create a module for network, you need to create a separate package. Let it be
+	in 'modules/<your-module-name>' folder for more maintability.
+	First of all, you need a structure which implements a Connection interface and a constructor
+	for it.
 
-	// alias of the sender (peer alias)
-	// or empty string for unknown, or magic string
-	// centi/protocol.UnknownSender.
-	Sender		string
-	SentByUs	bool		// check if the message was sent by us
-	// may be used by modules, centi does not touch this.
-	Args		map[string]string
+	The constructor is a function of type
+
+	which accepts a mapping of optional arguments and a list of channels to use.
+
+	Channel structure:
+	\begin{lstlisting}
+// general structure of channel
+type Channel struct {
+	// name of channel to use for communications
+	Name	string		`json:"name"`
+	// optional arguments for this channel
+	Args	map[string]string `json:"args"`
 }
 	\end{lstlisting}
 
-	So if you want to create your own module, you should comply with that interface and I/O formats.
-	After creating a module, register it in file modules/modules.go in function InitAllModules:
-	\begin{lstlisting}
-/* module structure from above: */
-type Module struct {
-	// name of module
-	Name		string
-	
-	// list of supported files extensions (for steganography)
-	SupportedExt	[]string	
+	When you finish, you need to register your module.
 
-	// constructor-function, accepts arguments and a list of channels.
-	Contructor	func( map[string]string, []config.Channel ) (
-		protocol.Connection, error
-	)
-}
+	Open `modules/modules.go` file and add your module inside InitAllModules() function:
+	\begin{lstlisting}
+// some other code here...
 
 func InitAllModules() {
-	RegisterModule( Module{"github", github.SupportedExt, github.NewGitHubConn } )
-	RegisterModule( Module{"gitea", gitea.SupportedExt, gitea.NewGiteaConn } )
-	RegisterModule( Module{"email", email.SupportedExt, email.NewEmailConn } )
+	// ...
+	RegisterModule(
+		Module{
+			"my-module",
+			mymodule.MyNewConn
+		},
+	)
 }
 	\end{lstlisting}
 
+	That's all. Just recompile the program, configure everything as you need and you are good to go.
+
+
+\section{Writing a microservice}
+	\subsection{API format}
+	Everything is as dumb as possible. Here is just one API endpoint. You can make it anything you like but consider 
+	using the same URL in configuration to be able to use your microservice.
+
+	The format of request (only JSON is used currently):
+	\begin{lstlisting}
+{
+	"message_type": "<init_microservice|
+			  init_channels|delete_channels|
+			  send|recv_messages|delete
+			  |message_from_bytes>",
+	"args": {"arguments": "if-needed"},
+	"channels": [{
+		"name": "chan1",
+		"args": {}}
+	]
+}
+	\end{lstlisting}
+
+	The format of response is similar to request format, but you may need to pass your response in "args" dictionary.
+	You also must supply "status" key with "success" or "failure" value.
+
+	\subsection{Example of microservice}
+	Here is the simplest example of microservice written in Python. You can find it's code in `microservices/test` folder.
+	This code example literally doesn't do anything except a basic api server setup. It also lacks syncronisation primitives
+	usage. This code also sends you only messages it have received from you which shouldn't be the case for an actual working
+	microservice.
+	\begin{lstlisting}
+import json
+import http.server
+import socketserver
+from base64 import b64encode, b64decode
+
+PORT = 8001
+messages = []
+
+class ApiHandler:
+    def __init__(self):
+        pass
+
+    def _init_microservice(self, args):
+        print("Initilalizing microservice:", args)
+
+    def _init_channels(self, channels):
+        print("Creating channels:", channels)
+
+    def _delete_channels(self, channels):
+        print("Deleting channels:", channels)
+
+    def _send(self, msg):
+        print("Sending message:", msg["data"])
+        global messages
+        messages.append( msg )
+
+    def _recv(self):
+        print("Receiving messages...")
+        global messages
+        msgs = [ m for m in messages ]
+        messages = []
+        return msgs
+
+    def _delete(self, msg):
+        print("Deleting message:", msg)
+
+    def gen_response( self, msg ):
+        msg_type = msg["message_type"]
+        response = {
+		"message_type": msg_type,
+		"status": "success",
+		"args": {}
+	}
+
+        if msg_type == "init_microservice":
+            self._init_microservice( msg["args"] )
+
+        elif msg_type == "init_channels":
+            self._init_channels(
+	    	msg["args"]["channels"]
+	    )
+
+        elif msg_type == "delete_channels":
+            self._delete_channels(
+	    	msg["args"]["channels"]
+	    )
+            
+        elif msg_type == "send":
+            self._send( msg["args"]["message"] )
+
+        elif msg_type == "recv_messages":
+            msgs = self._recv()
+            response["args"]["messages"] = msgs
+
+        elif msg_type == "delete":
+            self._delete( msg["args"]["message"] )
+
+        elif msg_type == "message_from_bytes":
+            args = {
+                    "test_argument": "test_value"
+            }
+            response["args"] = args
+        else:
+            response["status"] = "failure"
+            response["args"] = {
+                "error": msg_type
+            }
+        return response
+
+    def response( self, api_message ):
+        try:
+            msg = json.loads( api_message )
+            response = self.gen_response( msg )
+            res = json.dumps( response )
+            print( res )
+            return res
+
+        except Exception as e:
+            print(
+	        "[-] Failed to decode APIMessage:",
+	    	e,
+		"API Message:",
+		api_message
+	    )
+            return ""
+
+
+class ReqHandler( http.server.SimpleHTTPRequestHandler ):
+
+    def do_GET(self):
+        self.send_response( 403 )
+
+    def do_POST(self):
+        content_length = int(
+	    self.headers["Content-Length"]
+	)
+        post_data = self.rfile.read(
+	    content_length
+	)
+        post_data = post_data.decode()
+
+        api_handler = ApiHandler()
+
+        self.send_response(200)
+        self.send_header(
+		"Content-Type",
+		"application/json"
+	)
+        self.end_headers()
+
+        resp_msg = api_handler.response(
+		post_data
+	)
+        self.wfile.write(
+		resp_msg.encode()
+	)
+
+
+with socketserver.TCPServer(
+	("127.0.0.1", PORT),
+	ReqHandler
+	) as httpd:
+    print(f"[*] Serving on port {PORT}")
+    httpd.serve_forever()
+	\end{listlisting}
+
 \section{Conclusion}
-	I really hope it helped you a bit.
+	I really hope this manuall is helpful and covers
+	all parts of the topic.
+	Good luck with creation of your own modules and
+	microservices for the network.
 \end{document}
