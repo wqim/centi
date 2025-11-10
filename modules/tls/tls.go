@@ -8,13 +8,9 @@ import (
 	"strings"
 	"crypto/tls"
 	"encoding/json"
-	"encoding/base64"
-
-	
 	"centi/util"
 	"centi/config"
 	"centi/protocol"
-	"centi/cryptography"
 )
 
 /*
@@ -188,15 +184,15 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 		conn.Close()
 	}()
 
-	sentPk := false
-	receivedPk := false
+	//sentPk := false
+	//receivedPk := false
 
 	lastPacket := []byte{} //make([]byte, bufferSize)
 	totalReceived := uint(0)
 
 	for {
 		// check if we have sent a public key...
-		pkMtx.RLock()
+		/*pkMtx.RLock()
 		if len( publicKey ) > 0 {
 			if sentPk == false {
 				// send a public key if not done yet
@@ -207,6 +203,7 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 			} else {
 				// send an actual message from the toSend channel.
 				// the pain in the ass.
+				*/
 				var msg *protocol.Message
 				msg = nil
 
@@ -223,32 +220,35 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 				}
 
 				if msg != nil {
-					util.DebugPrintln("[SERVER] Sending message from channel:") //, string(msg.Data))
+					//util.DebugPrintln("[SERVER] Sending message from channel:") //, string(msg.Data))
 					conn.Write( msg.Data )
 					sentTo++
 				}
 				connectionsMtx.RUnlock() 
 				sentMtx.Unlock()
+				/*
 			}
 		}
 		// in another case we did not received
 		// a public key yet, therefore we are unable
 		// to make a secure connection.
 		// do nothing in that case.
-		pkMtx.RUnlock()
+		pkMtx.RUnlock()*/
 
+		
 		//util.DebugPrintln("Original buffer size:", bufferSize)
 		buf := make([]byte, bufferSize)
 		n, err := conn.Read( buf )
 		if err != nil {
+			//util.DebugPrintln("[tls] Failed to read data from client connection:", err)
 			return
 		}
 
 		totalReceived += uint(n)
 		lastPacket = append( lastPacket, buf[:n]... )
 
-		util.DebugPrintln("[SERVER] Received n =", n, "bytes from client.")
-		if receivedPk == false {
+		//util.DebugPrintln("[SERVER] Received n =", n, "bytes from client.")
+		/*if receivedPk == false {
 			// why do we receive public key by parts
 			if totalReceived == cryptography.TotalPkSize {
 				// first message is always a public key content
@@ -264,8 +264,9 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 				receivedPk = true
 			}
 		} else if receivedPk == true && totalReceived == bufferSize {
-			// received a full package.
-			util.DebugPrintln("[SERVER] Received message:", totalReceived, "bytes." ) //, string(buf))
+			// received a full package.*/
+		if totalReceived == bufferSize {
+			//util.DebugPrintln("[SERVER] Received message:", totalReceived, "bytes." ) //, string(buf))
 			// other messages are just normal messages
 			received <- &protocol.Message{
 				"",
@@ -277,18 +278,20 @@ func handleConnection( bufferSize uint, conn net.Conn ) {
 			}
 			totalReceived = 0
 			lastPacket = []byte{}
+		}
 
-		} else if totalReceived > bufferSize {
+		/*} else if totalReceived > bufferSize {
 			// received too many data...?
 			util.DebugPrintln("Received too many data, closing connection...")
 			return
-		}
+		}*/
 	}
 }
 
 
 
 // these ones are useful.
+/*
 func(n NetConn) DistributePk(p *config.DistributionParameters, pk []byte ) error {
 	util.DebugPrintln( "DistributePk():", len(pk), "bytes:", base64.StdEncoding.EncodeToString( pk[:64] ) )
 	
@@ -374,7 +377,7 @@ func(n NetConn) CollectPks(p *config.DistributionParameters) ([]protocol.KnownPk
 		publicKeys <- &pubKey
 	}
 	return pks, finalError
-}
+}*/
 
 func receiveMessagesInBackground( bufferSize uint, peer *Peer ) {
 	for {
@@ -385,18 +388,18 @@ func receiveMessagesInBackground( bufferSize uint, peer *Peer ) {
 		if peer.conn == nil {
 			return
 		}
-		if peer.pk == nil {
+		/*if peer.pk == nil {
 			// not a neccessary delay, just not to
 			// overwarm the computer.
 			peer.mtx.RUnlock()
 			time.Sleep( 1 * time.Second )
 			continue
-		}
+		}*/
 
 		buf := make([]byte, bufferSize)
 		nbytes, err := peer.conn.Read( buf )
 		if err == nil {
-			util.DebugPrintln("Got message from ", peer.conn.RemoteAddr().String())
+			//util.DebugPrintln("Got message from ", peer.conn.RemoteAddr().String())
 			msg := &protocol.Message{
 				"",
 				Name,
@@ -420,12 +423,11 @@ func receiveMessagesInBackground( bufferSize uint, peer *Peer ) {
 // send message to everyone
 func(n NetConn) Send( msg *protocol.Message ) error {
 
-	if len(*n.peers) > 0 {
+	/*if len(*n.peers) > 0 {
 		util.DebugPrintln("Send(): length =", len(msg.Data), "bytes." )
-	}
-
+	}*/
 	// for server-part
-	if n.server != nil && len(publicKey) > 0 {
+	if n.server != nil { //&& len(publicKey) > 0 {
 		// public key is set.
 		// this thing messes up the server-client tests...
 		// also check what there is someone we are able to send
@@ -441,9 +443,9 @@ func(n NetConn) Send( msg *protocol.Message ) error {
 	}
 
 	for _, peer := range *n.peers {
-		if peer.hasPk {	// already sent our public key
+		//if peer.hasPk {	// already sent our public key
 			peer.conn.Write( msg.Data )
-		}
+		//}
 	}
 	return nil
 }
@@ -488,11 +490,11 @@ func channelsToPeers( bufferSize uint, channels []config.Channel ) *[]*Peer {
 				go receiveMessagesInBackground( bufferSize, newPeer )
 				peers = append( peers, newPeer )
 			} else {
-				util.DebugPrintln("[!] Failed to connect to peer:", err)
+				util.DebugPrintln("[!] Failed to connect to peer at", parts[0] + ":" + parts[1], ":", err)
 			}
 		}
 	}
-	util.DebugPrintln("[+] Connected to", len(peers), "peers.")
+	//util.DebugPrintln("[+] Connected to", len(peers), "peers.")
 	return &peers
 }
 
