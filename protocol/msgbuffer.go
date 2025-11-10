@@ -20,7 +20,7 @@ type MsgBuffer struct {
 
 func NewMsgBuffer( peer *Peer, packetSize uint ) *MsgBuffer {
 	msgSize := util.CalculateDataSize( make( []byte, packetSize ), packetSize )
-	//uint( packetSize / 2 ) // as in peer struct
+
 	return &MsgBuffer{
 		peer,
 		[][]byte{},
@@ -39,12 +39,52 @@ func(mb *MsgBuffer) Push( data []byte ) {
 		return
 	}
 
+	/*i := uint(0)
+	for {
+		// get last element in buffer
+		lastElem := len(mb.parts) - 1
+		// check if we can put more data in it
+		if uint( len(mb.parts[lastElem]) ) < mb.msgSize {
+			// how much data?
+			amount := mb.msgSize - uint( len(mb.parts[lastElem]) )
+			if i + amount <= uint(len(data)) {
+				// append a slice of data with specified size
+				mb.parts[ lastElem ] = append( mb.parts[lastElem], data[i:i+amount]... )
+				i += amount
+			} else {
+				// append data till the end
+				mb.parts[ lastElem ] = append( mb.parts[lastElem], data[i:]... )
+				return
+			}
+		} else {
+			// we can't out more data in the last slice
+			// add a new one
+			if i + mb.msgSize < uint(len(data)) {
+				mb.parts = append( mb.parts, data[i:i+mb.msgSize] )
+				i += mb.msgSize
+			} else {
+				mb.parts = append( mb.parts, data[i:] )
+				return
+			}
+		}
+	}*/
+
+	
 	lastElem := len(mb.parts) - 1
-	if uint(len( mb.parts[lastElem] ) + len(data)) < mb.msgSize {
+	if uint(len( mb.parts[lastElem] ) + len(data)) <= mb.msgSize {
 		mb.parts[ lastElem ] = append( mb.parts[ lastElem ], data... )
 	} else {
-		mb.parts = append( mb.parts, data )
+		// handling of oversized data
+		for i := uint(0); i < uint(len(data)); i += mb.msgSize {
+			lastIdx := i + mb.msgSize
+			if uint(len(data)) < lastIdx {
+				lastIdx = uint(len(data))
+			}
+			mb.parts = append( mb.parts, data[i:lastIdx] )
+		}
+		//mb.parts = append( mb.parts, data )
 	}
+
 }
 
 func(mb *MsgBuffer) Clear() {
