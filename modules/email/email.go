@@ -17,7 +17,7 @@ import (
 	"centi/util"
 	"centi/config"
 	"centi/protocol"
-	"centi/cryptography"
+	//"centi/cryptography"
 )
 
 var (
@@ -92,17 +92,12 @@ func(e EmailConn) DeleteChannel( c *config.Channel ) error {
 	return nil
 }
 
-// do we really need this?
-func(e EmailConn) PrepareToDelete( data []byte ) (*protocol.Message, error) {
-	return nil, nil
-}
-
 func(e EmailConn) Delete( msg *protocol.Message ) error {
 	return nil
 }
 
 // actually need realisation
-func(e EmailConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
+/*func(e EmailConn) DistributePk( p *config.DistributionParameters, pk []byte ) error {
 	tmpMsg := &protocol.Message{
 		"",
 		e.Name(),
@@ -132,7 +127,7 @@ func(e EmailConn) CollectPks( p *config.DistributionParameters ) ([]protocol.Kno
 		}
 	}
 	return keys, nil
-}
+}*/
 
 func(e EmailConn) Send( msg *protocol.Message ) error {
 	// TODO: add steganography
