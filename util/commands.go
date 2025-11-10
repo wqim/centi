@@ -20,7 +20,7 @@ const (
  * user-related functions which are required 
  * in order not to fuck up user with constant decrypt-edit-encrypt things.
  */
-func EditConfig( config string, password, saltBytes []byte ) error {
+func EditConfig( conf string, password, saltBytes []byte ) error {
 	// decrypt config, put it into temporary file, edit,
 	// read, shred temporary file and put encrypted configuration
 	// back.
@@ -37,12 +37,16 @@ func EditConfig( config string, password, saltBytes []byte ) error {
 	}
 
 	// ok, text editor found, decrypt file
-	data, err := os.ReadFile( config )
+	data, err := os.ReadFile( conf )
 	if err != nil {
 		return fmt.Errorf("Failed to read configuration: %s", err.Error() )
 	}
 
-	key := cryptography.DeriveKey( password, saltBytes )
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		return fmt.Errorf("Failed to derive key from password: %s", err.Error())
+	}
+
 	pt, err := cryptography.Decrypt( data, key )
 	if err != nil {
 		return fmt.Errorf("Failed to decrypt configuration: %s", err.Error() + "; Invalid password?")
@@ -79,12 +83,16 @@ func EditConfig( config string, password, saltBytes []byte ) error {
 		return err
 	}
 
-	return os.WriteFile( config, data, 0660 )
+	return os.WriteFile( conf, data, 0660 )
 }
 
 func ReadLog( log string, password, saltBytes []byte ) error {
 	// just read the logs and print it to the screen
-	key := cryptography.DeriveKey( password, saltBytes )
+	key, err := cryptography.DeriveKey( password, saltBytes )
+	if err != nil {
+		return fmt.Errorf("Failed to derive key from password: %s", err.Error())
+	}
+
 	data, err := os.ReadFile( log )
 	if err != nil {
 		return fmt.Errorf("Failed to read file: %s", err.Error())
