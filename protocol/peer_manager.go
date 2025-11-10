@@ -1,15 +1,14 @@
 package protocol
 import (
 	"sync"
-	"bytes"
-	"centi/util"
+	//"bytes"
+	//"centi/util"
 	"centi/cryptography"
 )
 
 type PeerManager struct {
 	peers		[]*Peer
 	networkKey	[]byte
-	//networkSubkeys	map[string][]byte
 	mtx		sync.RWMutex
 }
 
@@ -25,7 +24,31 @@ func NewPeerManager(
 	}
 }
 
-func(p *PeerManager) NetworkSubkey() []byte {
+func(p *PeerManager) PeersFromKeys( publicKeys []string ) error {
+	// sync of course!
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	// build a peer from public keys known.
+	for _, pk := range publicKeys {
+		// decode public key
+		pkBytes, err := cryptography.DecodePublicKey( pk )
+		if err != nil {
+			return err
+		}
+		// take a hash of public key as an alias
+		alias := cryptography.Hash( pkBytes )
+		newPeer := NewPeer( alias )
+		// set public key bytes
+		if err = newPeer.SetPk( pkBytes, nil ); err != nil { //p.networkKey ); err != nil {
+			return err
+		}
+		p.peers = append( p.peers, newPeer )
+	}
+	return nil
+}
+
+func(p *PeerManager) NetworkKey() []byte {
 	return p.networkKey
 }
 
@@ -46,6 +69,7 @@ func(p *PeerManager) Exists( alias string ) bool {
 	return false
 }
 
+/*
 func(p *PeerManager) ExistsWithKey( pk []byte ) bool {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
@@ -56,6 +80,7 @@ func(p *PeerManager) ExistsWithKey( pk []byte ) bool {
 	}
 	return false
 }
+*/
 
 func(p *PeerManager) GetPeerByName( alias string ) *Peer {
 	p.mtx.RLock()
@@ -68,6 +93,7 @@ func(p *PeerManager) GetPeerByName( alias string ) *Peer {
 	return nil
 }
 
+/*
 func(p *PeerManager) GetPeerByPublicKey( pk []byte ) (int, *Peer) {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
@@ -78,7 +104,7 @@ func(p *PeerManager) GetPeerByPublicKey( pk []byte ) (int, *Peer) {
 	}
 	return -1, nil
 }
-
+*/
 
 func(p *PeerManager) GetPeers() []*Peer {
 	p.mtx.RLock()
@@ -86,6 +112,7 @@ func(p *PeerManager) GetPeers() []*Peer {
 	return p.peers
 }
 
+/*
 func(p *PeerManager) DropDuplicates() {
 
 	// drop peer duplicates.
@@ -159,3 +186,4 @@ func(p *PeerManager) DropDuplicates() {
 		}
 	}
 }
+*/
