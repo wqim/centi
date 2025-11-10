@@ -20,6 +20,10 @@ api_mtx = Lock()
 # api server-related class.
 class ReqHandler( http.server.SimpleHTTPRequestHandler ):
 
+    def do_GET(self):
+        # drop directory listing here
+        self.send_response( 403 )
+
     def do_POST(self):
 
         global api_handler
