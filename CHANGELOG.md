@@ -8,3 +8,13 @@
 - Finally made adequate steganography support
 - Add a reticulum microservice
 - Fixed some minor bugs
+
+
+2025-11-10
+- Changed protocol a bit
+- Fixed a lot of bugs
+- Moved bluetooth from module to microservice
+- Changed default configuration
+- Add a public key view function in command line toolset
+- Finally made a description of configuration
+- Made a more detailed documentation
