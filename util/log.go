@@ -73,7 +73,10 @@ func(l *Logger) LogString( s string ) {
 	} else {
 		pass, saltBytes, err := cryptography.SplitWithSalt( l.li.Password )
 		if err == nil {
-			key := cryptography.DeriveKey( pass, saltBytes )
+			key, err := cryptography.DeriveKey( pass, saltBytes )
+			if err != nil {
+				return
+			}
 			data, err := os.ReadFile( l.li.Filename )
 			if err == nil {
 				currentLog, err := cryptography.Decrypt( data, key )
