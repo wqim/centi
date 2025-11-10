@@ -37,6 +37,7 @@ func TestPNG( t *testing.T ) {
 				if err != nil {
 					t.Errorf("Failed to encode data: %v", err)
 				} else {
+					//os.WriteFile( "test.png", enc, 0660 )
 					dec, err := DecodeFromLSB( mode, enc )
 					if err != nil {
 						t.Errorf("Failed to extract data: %v", err)
